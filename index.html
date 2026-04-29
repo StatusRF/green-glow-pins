@@ -439,46 +439,10 @@
 
 <div class="container">
 
-  <!-- STEP 1: Credentials -->
-  <div class="card">
-    <div class="card-title"><div class="step">1</div> WordPress Credentials</div>
-    <div class="card-subtitle">Your credentials are used only for this session and never stored anywhere.</div>
-    <div class="security-note">
-      🔒 Type your Application Password directly here — never share it in chat or screenshots.
-    </div>
-    <div class="field-group">
-      <div class="row">
-        <div class="field">
-          <label>WordPress Username</label>
-          <input type="text" id="wp-user" placeholder="e.g. ricardo" value="ricardo" />
-        </div>
-        <div class="field">
-          <label>Application Password</label>
-          <input type="password" id="wp-pass" placeholder="xxxx xxxx xxxx xxxx xxxx xxxx" />
-          <div class="hint">WP Admin → Users → Profile → Application Passwords</div>
-        </div>
-      </div>
-      <div class="field">
-        <label>Claude API Key</label>
-        <input type="password" id="claude-key" placeholder="sk-ant-..." />
-        <div class="hint">From console.anthropic.com</div>
-      </div>
-    </div>
-
-    <div class="remember-row">
-      <div class="remember-left">
-        <input type="checkbox" id="remember-me" onchange="toggleRemember()" />
-        <label for="remember-me" style="cursor:pointer;color:var(--muted)">Remember on this browser</label>
-        <span class="saved-badge" id="saved-badge">✅ Saved</span>
-      </div>
-      <button class="btn-clear" onclick="clearSaved()">🗑 Clear saved</button>
-    </div>
-  </div>
-
   <!-- STEP 2: Product Info -->
   <div class="card">
-    <div class="card-title"><div class="step">2</div> Product Info</div>
-    <div class="card-subtitle">Paste the Amazon affiliate link and any extra context to help Claude write a better post.</div>
+    <div class="card-title"><div class="step">1</div> Product Info</div>
+    <div class="card-subtitle">Paste the Amazon affiliate link — Claude generates everything automatically and posts directly to WordPress.</div>
     <div class="field-group">
       <div class="field">
         <label>Amazon Affiliate Link</label>
@@ -603,50 +567,7 @@
 </div>
 
 <script>
-const WP_URL = 'https://greenandglowliving.com/wp-json/wp/v2';
-const STORAGE_KEY = 'gg_credentials';
-
-window.addEventListener('load', () => {
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved) {
-    try {
-      const creds = JSON.parse(saved);
-      document.getElementById('wp-user').value = creds.user || '';
-      document.getElementById('wp-pass').value = creds.pass || '';
-      document.getElementById('claude-key').value = creds.claude || '';
-      document.getElementById('remember-me').checked = true;
-      document.getElementById('saved-badge').classList.add('show');
-    } catch(e) {}
-  }
-});
-
-function toggleRemember() {
-  const checked = document.getElementById('remember-me').checked;
-  if (checked) { saveCredentials(); }
-  else {
-    localStorage.removeItem(STORAGE_KEY);
-    document.getElementById('saved-badge').classList.remove('show');
-  }
-}
-
-function saveCredentials() {
-  const creds = {
-    user: document.getElementById('wp-user').value,
-    pass: document.getElementById('wp-pass').value,
-    claude: document.getElementById('claude-key').value
-  };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(creds));
-  document.getElementById('saved-badge').classList.add('show');
-}
-
-function clearSaved() {
-  localStorage.removeItem(STORAGE_KEY);
-  document.getElementById('wp-user').value = '';
-  document.getElementById('wp-pass').value = '';
-  document.getElementById('claude-key').value = '';
-  document.getElementById('remember-me').checked = false;
-  document.getElementById('saved-badge').classList.remove('show');
-}
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx1R7i3XZRynxDcPxQnVLBRsX68P2fwktbfc7trRjEji6jAdcaEvb-PhJLy8FG1JH-0MQ/exec';
 
 function showStatus(msg, type = 'info') {
   const bar = document.getElementById('status-bar');
@@ -674,15 +595,10 @@ function copyField(id) {
 }
 
 async function startGeneration() {
-  const wpUser = document.getElementById('wp-user').value.trim();
-  const wpPass = document.getElementById('wp-pass').value.trim();
-  const claudeKey = document.getElementById('claude-key').value.trim();
   const affiliateUrl = document.getElementById('affiliate-url').value.trim();
   const productName = document.getElementById('product-name').value.trim();
   const extraNotes = document.getElementById('extra-notes').value.trim();
 
-  if (!wpUser || !wpPass) return showStatus('Please enter your WordPress username and application password.', 'error');
-  if (!claudeKey) return showStatus('Please enter your Claude API key.', 'error');
   if (!affiliateUrl) return showStatus('Please paste your Amazon affiliate link.', 'error');
 
   const btn = document.getElementById('generate-btn');
@@ -691,126 +607,48 @@ async function startGeneration() {
   document.getElementById('progress').classList.add('show');
   document.getElementById('result-card').classList.remove('show');
   document.getElementById('status-bar').classList.remove('show');
+  document.querySelectorAll('.progress-step').forEach(s => s.className = 'progress-step');
 
   try {
-    // STEP 1: Claude generates content
     setStep('step-claude');
 
-    const systemPrompt = `You are a content creator for Green & Glow Living (greenandglowliving.com), an eco-friendly lifestyle blog targeting US-based eco-conscious consumers. 
-Write in a warm, conversational first-person tone like a real person who loves sustainable living.
-You MUST return ONLY raw JSON with no markdown, no backticks, no preamble.`;
-
-    const userPrompt = `Create a complete blog post and Pinterest pin content for this product:
-
-Product URL: ${affiliateUrl}
-${productName ? `Product Name: ${productName}` : ''}
-${extraNotes ? `Extra notes: ${extraNotes}` : ''}
-
-Return this exact JSON structure:
-{
-  "blog_title": "catchy title with focus keyword",
-  "focus_keyword": "main SEO keyword phrase",
-  "seo_title": "SEO title under 60 chars",
-  "meta_description": "meta description under 155 chars",
-  "slug": "url-slug-with-dashes",
-  "category": "suggested WordPress category",
-  "blog_content": "Full HTML blog post, minimum 800 words. Start FIRST LINE (no heading before it) with the exact focus keyword. Use <h2> and <h3> headings. Include: intro, what it is, eco benefits, who its for, pros/cons, verdict. Add the affiliate link as a CTA button: <a href='AFFILIATE_URL' target='_blank' rel='nofollow' style='background:#2d6a4f;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;margin:16px 0'>Check Price on Amazon →</a>. End with a Related Posts section mentioning bamboo straws, cotton sheets, or other eco products.",
-  "pin_title": "Pinterest pin title under 100 chars",
-  "pin_description": "Pinterest pin description 200-300 chars with keywords",
-  "overlay_text": "Short catchy phrase for pin image, max 6 words",
-  "hashtags": ["#ecofriendly", "#sustainableliving", "#zerowaste"],
-  "pinterest_board": "suggested board name",
-  "alt_text": "descriptive alt text for pin image"
-}
-
-Replace AFFILIATE_URL with: ${affiliateUrl}`;
-
-    const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': claudeKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 4000,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: userPrompt }]
-      })
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ affiliateUrl, productName, extraNotes })
     });
-
-    if (!claudeRes.ok) {
-      const err = await claudeRes.json();
-      throw new Error(`Claude API error: ${err.error?.message || claudeRes.status}`);
-    }
-
-    const claudeData = await claudeRes.json();
-    let rawText = claudeData.content[0].text;
-    rawText = rawText.replace(/```json|```/g, '').trim();
-    const content = JSON.parse(rawText);
 
     setStep('step-seo');
-    await new Promise(r => setTimeout(r, 600));
+    const result = await response.json();
+
+    if (!result.success) throw new Error(result.error || 'Unknown error');
 
     setStep('step-pin');
-    await new Promise(r => setTimeout(r, 600));
-
-    // STEP 2: Post to WordPress
+    await new Promise(r => setTimeout(r, 400));
     setStep('step-wp');
-
-    const wpBody = {
-      title: content.blog_title,
-      content: content.blog_content,
-      status: 'draft',
-      slug: content.slug,
-      categories: [],
-      meta: {
-        rank_math_focus_keyword: content.focus_keyword,
-        rank_math_title: content.seo_title,
-        rank_math_description: content.meta_description
-      }
-    };
-
-    const wpCreds = btoa(`${wpUser}:${wpPass.replace(/\s/g, ' ')}`);
-    const wpRes = await fetch(`${WP_URL}/posts`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${wpCreds}`
-      },
-      body: JSON.stringify(wpBody)
-    });
-
-    if (!wpRes.ok) {
-      const wpErr = await wpRes.json();
-      throw new Error(`WordPress error: ${wpErr.message || wpRes.status}`);
-    }
-
-    const wpData = await wpRes.json();
+    await new Promise(r => setTimeout(r, 400));
     setStep('step-done');
 
-    // Show results
-    document.getElementById('r-title').innerHTML = `<button class="copy-btn" onclick="copyField('r-title')">Copy</button>${content.blog_title}`;
-    document.getElementById('r-keyword').textContent = content.focus_keyword;
-    document.getElementById('r-seo-title').innerHTML = `<button class="copy-btn" onclick="copyField('r-seo-title')">Copy</button>${content.seo_title}`;
-    document.getElementById('r-meta').innerHTML = `<button class="copy-btn" onclick="copyField('r-meta')">Copy</button>${content.meta_description}`;
-    document.getElementById('r-slug').textContent = content.slug;
-    document.getElementById('r-pin-title').innerHTML = `<button class="copy-btn" onclick="copyField('r-pin-title')">Copy</button>${content.pin_title}`;
-    document.getElementById('r-pin-desc').innerHTML = `<button class="copy-btn" onclick="copyField('r-pin-desc')">Copy</button>${content.pin_description}`;
-    document.getElementById('r-overlay').textContent = content.overlay_text;
-    document.getElementById('r-alt').innerHTML = `<button class="copy-btn" onclick="copyField('r-alt')">Copy</button>${content.alt_text}`;
-    document.getElementById('r-board').textContent = content.pinterest_board;
+    const d = result.data;
+
+    document.getElementById('r-title').innerHTML = `<button class="copy-btn" onclick="copyField('r-title')">Copy</button>${d.blogTitle}`;
+    document.getElementById('r-keyword').textContent = d.focusKeyword;
+    document.getElementById('r-seo-title').innerHTML = `<button class="copy-btn" onclick="copyField('r-seo-title')">Copy</button>${d.seoTitle}`;
+    document.getElementById('r-meta').innerHTML = `<button class="copy-btn" onclick="copyField('r-meta')">Copy</button>${d.metaDescription}`;
+    document.getElementById('r-slug').textContent = d.slug;
+    document.getElementById('r-pin-title').innerHTML = `<button class="copy-btn" onclick="copyField('r-pin-title')">Copy</button>${d.pinTitle}`;
+    document.getElementById('r-pin-desc').innerHTML = `<button class="copy-btn" onclick="copyField('r-pin-desc')">Copy</button>${d.pinDescription}`;
+    document.getElementById('r-overlay').textContent = d.overlayText;
+    document.getElementById('r-alt').innerHTML = `<button class="copy-btn" onclick="copyField('r-alt')">Copy</button>${d.altText}`;
+    document.getElementById('r-board').textContent = d.board;
 
     const tagsEl = document.getElementById('r-hashtags');
-    tagsEl.innerHTML = content.hashtags.map(t => `<span class="tag">${t}</span>`).join('');
+    const tags = Array.isArray(d.hashtags) ? d.hashtags : d.hashtags.split(' ');
+    tagsEl.innerHTML = tags.map(t => `<span class="tag">${t}</span>`).join('');
 
-    const editLink = wpData.link?.replace(/\/$/, '') || `https://greenandglowliving.com/wp-admin/post.php?post=${wpData.id}&action=edit`;
-    document.getElementById('wp-draft-link').href = `https://greenandglowliving.com/wp-admin/post.php?post=${wpData.id}&action=edit`;
-
+    document.getElementById('wp-draft-link').href = d.blogUrl;
     document.getElementById('result-card').classList.add('show');
-    showStatus(`✅ Draft posted! WordPress post ID: ${wpData.id}`, 'success');
+    showStatus(`✅ Draft posted to WordPress + saved to Google Sheets!`, 'success');
 
   } catch (err) {
     showStatus(`❌ Error: ${err.message}`, 'error');

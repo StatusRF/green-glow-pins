@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Green & Glow — Draft Creator</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green-deep: #1a3a2a;
+    --green-mid: #2d6a4f;
+    --green-light: #52b788;
+    --green-pale: #d8f3dc;
+    --gold: #c9a84c;
+    --cream: #f9f6f0;
+    --text: #1a1a1a;
+    --muted: #6b7c6e;
+    --border: #d0e8d8;
+    --error: #c0392b;
+    --success: #27ae60;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    min-height: 100vh;
+    color: var(--text);
+  }
+
+  .header {
+    background: var(--green-deep);
+    padding: 24px 40px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .logo {
+    width: 40px; height: 40px;
+    background: var(--green-light);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+
+  .header h1 {
+    font-family: 'Playfair Display', serif;
+    color: var(--cream);
+    font-size: 22px;
+    font-weight: 600;
+  }
+
+  .header span {
+    color: var(--green-light);
+    font-size: 13px;
+    font-weight: 300;
+    margin-left: 4px;
+  }
+
+  .container {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 40px 24px;
+  }
+
+  .card {
+    background: white;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    padding: 32px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+  }
+
+  .card-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    color: var(--green-deep);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .card-title .step {
+    width: 28px; height: 28px;
+    background: var(--green-pale);
+    color: var(--green-mid);
+    border-radius: 50%;
+    font-size: 13px;
+    font-weight: 500;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .card-subtitle {
+    color: var(--muted);
+    font-size: 13px;
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+
+  .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--green-deep);
+    letter-spacing: 0.02em;
+  }
+
+  input, textarea {
+    padding: 12px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--cream);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+    width: 100%;
+  }
+
+  input:focus, textarea:focus {
+    border-color: var(--green-light);
+    box-shadow: 0 0 0 3px rgba(82,183,136,0.15);
+    background: white;
+  }
+
+  input[type="password"] {
+    letter-spacing: 0.1em;
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 80px;
+    line-height: 1.6;
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .btn {
+    padding: 14px 28px;
+    border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-primary {
+    background: var(--green-mid);
+    color: white;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: var(--green-deep);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(45,106,79,0.3);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .btn-secondary {
+    background: var(--green-pale);
+    color: var(--green-deep);
+    font-size: 13px;
+    padding: 8px 16px;
+  }
+
+  .btn-secondary:hover {
+    background: var(--border);
+  }
+
+  .status-bar {
+    padding: 14px 18px;
+    border-radius: 10px;
+    font-size: 14px;
+    margin-top: 16px;
+    display: none;
+    align-items: flex-start;
+    gap: 10px;
+    line-height: 1.5;
+  }
+
+  .status-bar.show { display: flex; }
+  .status-bar.info { background: #e8f4fd; color: #2980b9; border: 1px solid #bee3f8; }
+  .status-bar.success { background: #eafaf1; color: var(--success); border: 1px solid #a9dfbf; }
+  .status-bar.error { background: #fdf0ef; color: var(--error); border: 1px solid #f5c6cb; }
+  .status-bar.warning { background: #fef9e7; color: #d68910; border: 1px solid #fad7a0; }
+
+  .progress {
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  .progress.show { display: flex; }
+
+  .progress-step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--muted);
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: all 0.3s;
+  }
+
+  .progress-step.active {
+    background: var(--green-pale);
+    color: var(--green-mid);
+    font-weight: 500;
+  }
+
+  .progress-step.done {
+    color: var(--success);
+  }
+
+  .progress-step .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    flex-shrink: 0;
+  }
+
+  .progress-step.active .dot { background: var(--green-light); animation: pulse 1s infinite; }
+  .progress-step.done .dot { background: var(--success); }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  .result-card {
+    display: none;
+    background: white;
+    border-radius: 16px;
+    border: 2px solid var(--green-light);
+    padding: 28px 32px;
+    margin-top: 24px;
+  }
+
+  .result-card.show { display: block; }
+
+  .result-title {
+    font-family: 'Playfair Display', serif;
+    color: var(--green-deep);
+    font-size: 20px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .result-section {
+    margin-bottom: 20px;
+  }
+
+  .result-label {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .result-value {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text);
+    background: var(--cream);
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    position: relative;
+  }
+
+  .copy-btn {
+    position: absolute;
+    top: 8px; right: 8px;
+    background: var(--green-pale);
+    border: none;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 11px;
+    color: var(--green-mid);
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .copy-btn:hover { background: var(--border); }
+
+  .wp-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--green-mid);
+    color: white;
+    text-decoration: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    margin-top: 16px;
+    transition: background 0.2s;
+  }
+
+  .wp-link:hover { background: var(--green-deep); }
+
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 20px 0;
+  }
+
+  .tag {
+    display: inline-block;
+    background: var(--green-pale);
+    color: var(--green-mid);
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    margin: 2px;
+  }
+
+  .hint {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .remember-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  .remember-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .remember-left input[type="checkbox"] {
+    width: auto;
+    padding: 0;
+    border: none;
+    background: none;
+    box-shadow: none;
+    cursor: pointer;
+    accent-color: var(--green-mid);
+  }
+
+  .btn-clear {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-size: 12px;
+    color: var(--muted);
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.2s;
+  }
+
+  .btn-clear:hover {
+    border-color: var(--error);
+    color: var(--error);
+  }
+
+  .saved-badge {
+    display: none;
+    font-size: 12px;
+    color: var(--success);
+    align-items: center;
+    gap: 4px;
+  }
+  .saved-badge.show { display: flex; }
+
+  .security-note {
+    background: #fff8e1;
+    border: 1px solid #ffe082;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: #856404;
+    margin-bottom: 16px;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">🌿</div>
+  <div>
+    <h1>Green & Glow <span>Draft Creator</span></h1>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- STEP 1: Credentials -->
+  <div class="card">
+    <div class="card-title"><div class="step">1</div> WordPress Credentials</div>
+    <div class="card-subtitle">Your credentials are used only for this session and never stored anywhere.</div>
+    <div class="security-note">
+      🔒 Type your Application Password directly here — never share it in chat or screenshots.
+    </div>
+    <div class="field-group">
+      <div class="row">
+        <div class="field">
+          <label>WordPress Username</label>
+          <input type="text" id="wp-user" placeholder="e.g. ricardo" value="ricardo" />
+        </div>
+        <div class="field">
+          <label>Application Password</label>
+          <input type="password" id="wp-pass" placeholder="xxxx xxxx xxxx xxxx xxxx xxxx" />
+          <div class="hint">WP Admin → Users → Profile → Application Passwords</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Claude API Key</label>
+        <input type="password" id="claude-key" placeholder="sk-ant-..." />
+        <div class="hint">From console.anthropic.com</div>
+      </div>
+    </div>
+
+    <div class="remember-row">
+      <div class="remember-left">
+        <input type="checkbox" id="remember-me" onchange="toggleRemember()" />
+        <label for="remember-me" style="cursor:pointer;color:var(--muted)">Remember on this browser</label>
+        <span class="saved-badge" id="saved-badge">✅ Saved</span>
+      </div>
+      <button class="btn-clear" onclick="clearSaved()">🗑 Clear saved</button>
+    </div>
+  </div>
+
+  <!-- STEP 2: Product Info -->
+  <div class="card">
+    <div class="card-title"><div class="step">2</div> Product Info</div>
+    <div class="card-subtitle">Paste the Amazon affiliate link and any extra context to help Claude write a better post.</div>
+    <div class="field-group">
+      <div class="field">
+        <label>Amazon Affiliate Link</label>
+        <input type="url" id="affiliate-url" placeholder="https://www.amazon.com/dp/XXXXXXXX?tag=greenandglow-20" />
+      </div>
+      <div class="field">
+        <label>Product Name <span style="color:var(--muted);font-weight:300">(optional — Claude will extract it)</span></label>
+        <input type="text" id="product-name" placeholder="e.g. Bambaw Bamboo Straws" />
+      </div>
+      <div class="field">
+        <label>Extra Notes for Claude <span style="color:var(--muted);font-weight:300">(optional)</span></label>
+        <textarea id="extra-notes" placeholder="e.g. Focus on zero waste angle, mention it's great for smoothies, target eco-conscious moms..."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- Generate Button -->
+  <button class="btn btn-primary" id="generate-btn" onclick="startGeneration()">
+    🌿 Generate Blog Draft
+  </button>
+
+  <!-- Progress -->
+  <div class="progress" id="progress">
+    <div class="progress-step" id="step-claude">
+      <div class="dot"></div> Generating blog content with Claude...
+    </div>
+    <div class="progress-step" id="step-seo">
+      <div class="dot"></div> Building SEO fields (Rank Math)...
+    </div>
+    <div class="progress-step" id="step-pin">
+      <div class="dot"></div> Creating Pinterest pin content...
+    </div>
+    <div class="progress-step" id="step-wp">
+      <div class="dot"></div> Posting draft to WordPress...
+    </div>
+    <div class="progress-step" id="step-done">
+      <div class="dot"></div> Done!
+    </div>
+  </div>
+
+  <div class="status-bar" id="status-bar"></div>
+
+  <!-- Results -->
+  <div class="result-card" id="result-card">
+    <div class="result-title">
+      <span>✅ Draft Created!</span>
+      <a id="wp-draft-link" href="#" target="_blank" class="wp-link">Open in WordPress →</a>
+    </div>
+
+    <div class="result-section">
+      <div class="result-label">Blog Title</div>
+      <div class="result-value" id="r-title" style="position:relative">
+        <button class="copy-btn" onclick="copyField('r-title')">Copy</button>
+      </div>
+    </div>
+
+    <div class="result-section">
+      <div class="result-label">Focus Keyword</div>
+      <div class="result-value" id="r-keyword"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="result-section">
+      <div class="result-label">SEO Title (Rank Math)</div>
+      <div class="result-value" id="r-seo-title" style="position:relative">
+        <button class="copy-btn" onclick="copyField('r-seo-title')">Copy</button>
+      </div>
+    </div>
+
+    <div class="result-section">
+      <div class="result-label">Meta Description (Rank Math)</div>
+      <div class="result-value" id="r-meta" style="position:relative">
+        <button class="copy-btn" onclick="copyField('r-meta')">Copy</button>
+      </div>
+    </div>
+
+    <div class="result-section">
+      <div class="result-label">Permalink Slug</div>
+      <div class="result-value" id="r-slug"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="result-section">
+      <div class="result-label">Pin Title</div>
+      <div class="result-value" id="r-pin-title" style="position:relative">
+        <button class="copy-btn" onclick="copyField('r-pin-title')">Copy</button>
+      </div>
+    </div>
+
+    <div class="result-section">
+      <div class="result-label">Pin Description</div>
+      <div class="result-value" id="r-pin-desc" style="position:relative">
+        <button class="copy-btn" onclick="copyField('r-pin-desc')">Copy</button>
+      </div>
+    </div>
+
+    <div class="result-section">
+      <div class="result-label">Overlay Text (for pin image)</div>
+      <div class="result-value" id="r-overlay"></div>
+    </div>
+
+    <div class="result-section">
+      <div class="result-label">Hashtags</div>
+      <div id="r-hashtags"></div>
+    </div>
+
+    <div class="result-section">
+      <div class="result-label">Pinterest Board</div>
+      <div class="result-value" id="r-board"></div>
+    </div>
+
+    <div class="result-section">
+      <div class="result-label">Alt Text</div>
+      <div class="result-value" id="r-alt" style="position:relative">
+        <button class="copy-btn" onclick="copyField('r-alt')">Copy</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const WP_URL = 'https://greenandglowliving.com/wp-json/wp/v2';
+const STORAGE_KEY = 'gg_credentials';
+
+window.addEventListener('load', () => {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    try {
+      const creds = JSON.parse(saved);
+      document.getElementById('wp-user').value = creds.user || '';
+      document.getElementById('wp-pass').value = creds.pass || '';
+      document.getElementById('claude-key').value = creds.claude || '';
+      document.getElementById('remember-me').checked = true;
+      document.getElementById('saved-badge').classList.add('show');
+    } catch(e) {}
+  }
+});
+
+function toggleRemember() {
+  const checked = document.getElementById('remember-me').checked;
+  if (checked) { saveCredentials(); }
+  else {
+    localStorage.removeItem(STORAGE_KEY);
+    document.getElementById('saved-badge').classList.remove('show');
+  }
+}
+
+function saveCredentials() {
+  const creds = {
+    user: document.getElementById('wp-user').value,
+    pass: document.getElementById('wp-pass').value,
+    claude: document.getElementById('claude-key').value
+  };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(creds));
+  document.getElementById('saved-badge').classList.add('show');
+}
+
+function clearSaved() {
+  localStorage.removeItem(STORAGE_KEY);
+  document.getElementById('wp-user').value = '';
+  document.getElementById('wp-pass').value = '';
+  document.getElementById('claude-key').value = '';
+  document.getElementById('remember-me').checked = false;
+  document.getElementById('saved-badge').classList.remove('show');
+}
+
+function showStatus(msg, type = 'info') {
+  const bar = document.getElementById('status-bar');
+  bar.textContent = msg;
+  bar.className = `status-bar show ${type}`;
+}
+
+function setStep(stepId) {
+  document.querySelectorAll('.progress-step').forEach(s => {
+    if (s.classList.contains('active')) {
+      s.classList.remove('active');
+      s.classList.add('done');
+    }
+  });
+  const el = document.getElementById(stepId);
+  if (el) el.classList.add('active');
+}
+
+function copyField(id) {
+  const el = document.getElementById(id);
+  const text = el.innerText.replace('Copy', '').trim();
+  navigator.clipboard.writeText(text);
+  const btn = el.querySelector('.copy-btn');
+  if (btn) { btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = 'Copy', 1500); }
+}
+
+async function startGeneration() {
+  const wpUser = document.getElementById('wp-user').value.trim();
+  const wpPass = document.getElementById('wp-pass').value.trim();
+  const claudeKey = document.getElementById('claude-key').value.trim();
+  const affiliateUrl = document.getElementById('affiliate-url').value.trim();
+  const productName = document.getElementById('product-name').value.trim();
+  const extraNotes = document.getElementById('extra-notes').value.trim();
+
+  if (!wpUser || !wpPass) return showStatus('Please enter your WordPress username and application password.', 'error');
+  if (!claudeKey) return showStatus('Please enter your Claude API key.', 'error');
+  if (!affiliateUrl) return showStatus('Please paste your Amazon affiliate link.', 'error');
+
+  const btn = document.getElementById('generate-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Working...';
+  document.getElementById('progress').classList.add('show');
+  document.getElementById('result-card').classList.remove('show');
+  document.getElementById('status-bar').classList.remove('show');
+
+  try {
+    // STEP 1: Claude generates content
+    setStep('step-claude');
+
+    const systemPrompt = `You are a content creator for Green & Glow Living (greenandglowliving.com), an eco-friendly lifestyle blog targeting US-based eco-conscious consumers. 
+Write in a warm, conversational first-person tone like a real person who loves sustainable living.
+You MUST return ONLY raw JSON with no markdown, no backticks, no preamble.`;
+
+    const userPrompt = `Create a complete blog post and Pinterest pin content for this product:
+
+Product URL: ${affiliateUrl}
+${productName ? `Product Name: ${productName}` : ''}
+${extraNotes ? `Extra notes: ${extraNotes}` : ''}
+
+Return this exact JSON structure:
+{
+  "blog_title": "catchy title with focus keyword",
+  "focus_keyword": "main SEO keyword phrase",
+  "seo_title": "SEO title under 60 chars",
+  "meta_description": "meta description under 155 chars",
+  "slug": "url-slug-with-dashes",
+  "category": "suggested WordPress category",
+  "blog_content": "Full HTML blog post, minimum 800 words. Start FIRST LINE (no heading before it) with the exact focus keyword. Use <h2> and <h3> headings. Include: intro, what it is, eco benefits, who its for, pros/cons, verdict. Add the affiliate link as a CTA button: <a href='AFFILIATE_URL' target='_blank' rel='nofollow' style='background:#2d6a4f;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;margin:16px 0'>Check Price on Amazon →</a>. End with a Related Posts section mentioning bamboo straws, cotton sheets, or other eco products.",
+  "pin_title": "Pinterest pin title under 100 chars",
+  "pin_description": "Pinterest pin description 200-300 chars with keywords",
+  "overlay_text": "Short catchy phrase for pin image, max 6 words",
+  "hashtags": ["#ecofriendly", "#sustainableliving", "#zerowaste"],
+  "pinterest_board": "suggested board name",
+  "alt_text": "descriptive alt text for pin image"
+}
+
+Replace AFFILIATE_URL with: ${affiliateUrl}`;
+
+    const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': claudeKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }]
+      })
+    });
+
+    if (!claudeRes.ok) {
+      const err = await claudeRes.json();
+      throw new Error(`Claude API error: ${err.error?.message || claudeRes.status}`);
+    }
+
+    const claudeData = await claudeRes.json();
+    let rawText = claudeData.content[0].text;
+    rawText = rawText.replace(/```json|```/g, '').trim();
+    const content = JSON.parse(rawText);
+
+    setStep('step-seo');
+    await new Promise(r => setTimeout(r, 600));
+
+    setStep('step-pin');
+    await new Promise(r => setTimeout(r, 600));
+
+    // STEP 2: Post to WordPress
+    setStep('step-wp');
+
+    const wpBody = {
+      title: content.blog_title,
+      content: content.blog_content,
+      status: 'draft',
+      slug: content.slug,
+      categories: [],
+      meta: {
+        rank_math_focus_keyword: content.focus_keyword,
+        rank_math_title: content.seo_title,
+        rank_math_description: content.meta_description
+      }
+    };
+
+    const wpCreds = btoa(`${wpUser}:${wpPass.replace(/\s/g, ' ')}`);
+    const wpRes = await fetch(`${WP_URL}/posts`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${wpCreds}`
+      },
+      body: JSON.stringify(wpBody)
+    });
+
+    if (!wpRes.ok) {
+      const wpErr = await wpRes.json();
+      throw new Error(`WordPress error: ${wpErr.message || wpRes.status}`);
+    }
+
+    const wpData = await wpRes.json();
+    setStep('step-done');
+
+    // Show results
+    document.getElementById('r-title').innerHTML = `<button class="copy-btn" onclick="copyField('r-title')">Copy</button>${content.blog_title}`;
+    document.getElementById('r-keyword').textContent = content.focus_keyword;
+    document.getElementById('r-seo-title').innerHTML = `<button class="copy-btn" onclick="copyField('r-seo-title')">Copy</button>${content.seo_title}`;
+    document.getElementById('r-meta').innerHTML = `<button class="copy-btn" onclick="copyField('r-meta')">Copy</button>${content.meta_description}`;
+    document.getElementById('r-slug').textContent = content.slug;
+    document.getElementById('r-pin-title').innerHTML = `<button class="copy-btn" onclick="copyField('r-pin-title')">Copy</button>${content.pin_title}`;
+    document.getElementById('r-pin-desc').innerHTML = `<button class="copy-btn" onclick="copyField('r-pin-desc')">Copy</button>${content.pin_description}`;
+    document.getElementById('r-overlay').textContent = content.overlay_text;
+    document.getElementById('r-alt').innerHTML = `<button class="copy-btn" onclick="copyField('r-alt')">Copy</button>${content.alt_text}`;
+    document.getElementById('r-board').textContent = content.pinterest_board;
+
+    const tagsEl = document.getElementById('r-hashtags');
+    tagsEl.innerHTML = content.hashtags.map(t => `<span class="tag">${t}</span>`).join('');
+
+    const editLink = wpData.link?.replace(/\/$/, '') || `https://greenandglowliving.com/wp-admin/post.php?post=${wpData.id}&action=edit`;
+    document.getElementById('wp-draft-link').href = `https://greenandglowliving.com/wp-admin/post.php?post=${wpData.id}&action=edit`;
+
+    document.getElementById('result-card').classList.add('show');
+    showStatus(`✅ Draft posted! WordPress post ID: ${wpData.id}`, 'success');
+
+  } catch (err) {
+    showStatus(`❌ Error: ${err.message}`, 'error');
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🌿 Generate Blog Draft';
+  }
+}
+</script>
+</body>
+</html>

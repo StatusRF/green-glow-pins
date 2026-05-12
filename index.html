@@ -40,6 +40,22 @@ const STYLES=[
   {label:"Deep Luxury Night",        scene:"warm amber candlelight, rich dark velvet or polished marble surface, luxury evening mood"}
 ];
 
+// ── Board matching — never trust GPT for IDs, always match by name ───────────
+
+function matchBoard(boardName, boards) {
+  if (!boardName || !boards.length) return null;
+  const name = boardName.toLowerCase().trim();
+  // 1. Exact match
+  let found = boards.find(b => b.name.toLowerCase().trim() === name);
+  if (found) return found;
+  // 2. Board name contains GPT suggestion
+  found = boards.find(b => b.name.toLowerCase().includes(name));
+  if (found) return found;
+  // 3. GPT suggestion contains board name
+  found = boards.find(b => name.includes(b.name.toLowerCase()));
+  return found || null;
+}
+
 // ── URL helpers ──────────────────────────────────────────────────────────────
 
 function parseAmazonName(url){
@@ -94,9 +110,9 @@ async function autoDetect(images,amazonUrl,oaiKey){
 }
 
 async function generateStrategies(images,productName,desc,blogUrl,boards,oaiKey){
-  const bl=boards.length?boards.map(b=>`"${b.name}" (id:${b.id})`).join(", "):"No boards loaded";
+  const bl=boards.length?boards.map(b=>b.name).join(", "):"No boards loaded";
   const sl=STYLES.map((s,i)=>`Pin${i+1}: ${s.label}`).join("\n");
-  const prompt=`Product: ${productName}\nFeatures: ${desc||"see images"}\nBlog post URL: ${blogUrl}\n\nAvailable Tailwind boards: ${bl}\n\nGenerate 10 Pinterest pin concepts. Return ONLY compact JSON (no markdown):\n{"pins":[{"style":"","overlay_text":"","title":"","description":"","board_id":"","board_name":"","alt_text":""}]}\n\nStyles in order:\n${sl}\n\nRules:\n- overlay_text: max 5 punchy words, ALL different angles (benefit/problem/feature/lifestyle/value/hook/eco/statement/curiosity/comparison)\n- title: max 100 chars, keyword-rich for Pinterest search\n- description: max 430 chars — Hook. 2-3 key eco features. Payoff. CTA like "Full review on the blog 🌿". End with: "Affiliate link — no extra cost to you 💚". New line then 8-10 hashtags. Do NOT include the blog URL in the text.\n- board_id + board_name: exact IDs from boards list above. ONLY assign boards that are genuinely relevant to this specific product — do NOT use a board just to avoid repetition. If only 3 boards are truly relevant, use those 3 across all 10 pins. Never assign a pin to an irrelevant board.\n- alt_text: descriptive with product name and scene\n- Tone: warm, conversational, eco-conscious — Green & Glow Living, US women 25-45`;
+  const prompt=`Product: ${productName}\nFeatures: ${desc||"see images"}\nBlog post URL: ${blogUrl}\n\nAvailable Tailwind boards: ${bl}\n\nGenerate 10 Pinterest pin concepts. Return ONLY compact JSON (no markdown):\n{"pins":[{"style":"","overlay_text":"","title":"","description":"","board_name":"","alt_text":""}]}\n\nStyles in order:\n${sl}\n\nRules:\n- overlay_text: max 5 punchy words, ALL different angles (benefit/problem/feature/lifestyle/value/hook/eco/statement/curiosity/comparison)\n- title: max 100 chars, keyword-rich for Pinterest search\n- description: max 430 chars — Hook. 2-3 key eco features. Payoff. CTA like "Full review on the blog 🌿". End with: "Affiliate link — no extra cost to you 💚". New line then 8-10 hashtags. Do NOT include the blog URL in the text.\n- board_name: ONLY use board names that are genuinely relevant to this product. Pick from the boards list above. Boards can repeat across pins — never assign a pin to an irrelevant board just to vary. Only use boards that truly fit this product category.\n- alt_text: descriptive with product name and scene\n- Tone: warm, conversational, eco-conscious — Green & Glow Living, US women 25-45`;
   const imgContent=images.map(img=>({type:"image_url",image_url:{url:`data:${img.mime};base64,${img.b64}`,detail:"low"}}));
   const r=await fetch("https://api.openai.com/v1/chat/completions",{
     method:"POST",
@@ -149,11 +165,11 @@ async function getBoards(aid,key){
   const d=await r.json();
   return(d.data?.boards||[]).filter(b=>!b.isSecret);
 }
-async function twPost(aid,key,{mediaUrl,title,description,url,boardId,altText}){
+async function twPost(aid,key,{mediaUrl,title,description,url,boardId,alt_text}){
   const r=await fetch(`https://api-v1.tailwind.ai/v1/accounts/${aid}/posts`,{
     method:"POST",
     headers:{Authorization:"Bearer "+key,"Content-Type":"application/json"},
-    body:JSON.stringify({mediaUrl,title,description,url,boardId,altText})
+    body:JSON.stringify({mediaUrl,title,description,url,boardId,alt_text})
   });
   const d=await r.json();
   if(!d.data?.post)throw new Error("Tailwind: "+(d.error?.message||"failed"));
@@ -387,7 +403,8 @@ function App(){
         work[i]={...work[i],imgbbUrl,status:"pushing"};setPins([...work]);
         setProg({msg:`Pin ${i+1}/10 — ${s.label}`,sub:"Creating Tailwind draft...",pct:7+i*9});
         try{
-          const tid=await twPost(acc.id,tw,{mediaUrl:imgbbUrl,title:p.title,description:p.description,url:blogUrl,boardId:p.board_id,altText:p.alt_text});
+          const matchedBoard=matchBoard(p.board_name,boards);
+          const tid=await twPost(acc.id,tw,{mediaUrl:imgbbUrl,title:p.title,description:p.description,url:blogUrl,boardId:matchedBoard?.id,alt_text:p.alt_text});
           work[i]={...work[i],twId:tid,status:"done"};
         }catch(e){work[i]={...work[i],status:"failed",error:e.message};}
         setPins([...work]);
@@ -408,7 +425,7 @@ function App(){
       const imgbbUrl=await uploadImgBB(du.split(",")[1],ibb);
       setPins(x=>upd(x,idx,{status:"pushing"}));
       if(p.twId){try{await twDel(acc.id,p.twId,tw);}catch(e){}}
-      const tid=await twPost(acc.id,tw,{mediaUrl:imgbbUrl,title:p.title,description:p.description,url:blogUrl,boardId:p.board_id,altText:p.alt_text});
+      const tid=await twPost(acc.id,tw,{mediaUrl:imgbbUrl,title:p.title,description:p.description,url:blogUrl,boardId:matchBoard(p.board_name,boards)?.id,alt_text:p.alt_text});
       setPins(x=>upd(x,idx,{rawB64,dataUrl:du,imgbbUrl,twId:tid,status:"done",error:null}));
     }catch(e){setPins(x=>upd(x,idx,{status:"failed",error:e.message}));}
     finally{setRegen(null);}
@@ -421,7 +438,7 @@ function App(){
       const du=await composite(p.rawB64,etxt);
       const imgbbUrl=await uploadImgBB(du.split(",")[1],ibb);
       if(p.twId){try{await twDel(acc.id,p.twId,tw);}catch(e){}}
-      const tid=await twPost(acc.id,tw,{mediaUrl:imgbbUrl,title:p.title,description:p.description,url:blogUrl,boardId:p.board_id,altText:p.alt_text});
+      const tid=await twPost(acc.id,tw,{mediaUrl:imgbbUrl,title:p.title,description:p.description,url:blogUrl,boardId:matchBoard(p.board_name,boards)?.id,alt_text:p.alt_text});
       setPins(x=>upd(x,active,{overlay_text:etxt,dataUrl:du,imgbbUrl,twId:tid,status:"done"}));
     }catch(e){alert("Error: "+e.message);}
     finally{setEbusy(false);}

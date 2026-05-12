@@ -109,7 +109,7 @@ async function autoDetect(images,amazonUrl,oaiKey){
   return JSON.parse(d.choices[0].message.content.replace(/```json|```/g,"").trim());
 }
 
-async function generateStrategies(images,productName,desc,blogUrl,boards,oaiKey){
+async function generateStrategies(images,productName,desc,blogUrl,boards,oaiKey,pinCount){
   const bl=boards.length?boards.map(b=>b.name).join(", "):"No boards loaded";
   const sl=STYLES.slice(0,pinCount).map((s,i)=>`Pin${i+1}: ${s.label}`).join("\n");
   const prompt=`Product: ${productName}\nFeatures: ${desc||"see images"}\nBlog post URL: ${blogUrl}\n\nAvailable Tailwind boards: ${bl}\n\nGenerate ${pinCount} Pinterest pin concepts. Return ONLY compact JSON (no markdown):\n{"pins":[{"style":"","overlay_text":"","title":"","description":"","board_name":"","alt_text":""}]}\n\nStyles in order:\n${sl}\n\nRules:\n- overlay_text: max 5 punchy words, ALL different angles (benefit/problem/feature/lifestyle/value/hook/eco/statement/curiosity/comparison)\n- title: max 100 chars, keyword-rich for Pinterest search\n- description: max 430 chars — Hook. 2-3 key eco features. Payoff. CTA like "Full review on the blog 🌿". End with: "Affiliate link — no extra cost to you 💚". New line then 8-10 hashtags. Do NOT include the blog URL in the text.\n- board_name: ONLY use board names that are genuinely relevant to this product. Pick from the boards list above. Boards can repeat across pins — never assign a pin to an irrelevant board just to vary. Only use boards that truly fit this product category.\n- alt_text: descriptive with product name and scene\n- Tone: warm, conversational, eco-conscious — Green & Glow Living, US women 25-45`;
@@ -379,7 +379,7 @@ function App(){
     setStep("generating");setErr("");
     try{
       setProg({msg:"Analyzing product with GPT-4o-mini...",sub:"Writing 10 pin strategies",pct:3});
-      const raw=await generateStrategies(images,name,desc,blogUrl,boards,oai);
+      const raw=await generateStrategies(images,name,desc,blogUrl,boards,oai,pinCount);
       let an;
       try{an=JSON.parse(raw);}
       catch{throw new Error("Could not parse strategies — please try again.");}

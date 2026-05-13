@@ -81,12 +81,12 @@ async function generateContent(images,productName,desc,blogUrl,boardNames,oaiKey
   const sl=STYLES.slice(0,pinCount).map((s,i)=>`Pin${i+1}: ${s.label}`).join("\n");
   const r=await fetch("https://api.openai.com/v1/chat/completions",{
     method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+oaiKey},
-    body:JSON.stringify({model:"gpt-4o-mini",max_tokens:2500,
+    body:JSON.stringify({model:"gpt-4o-mini",max_tokens:4000,
       messages:[
         {role:"system",content:"Pinterest marketing expert for Green & Glow Living eco blog. Return ONLY compact valid JSON."},
         {role:"user",content:[
           ...images.map(img=>({type:"image_url",image_url:{url:`data:${img.mime};base64,${img.b64}`,detail:"low"}})),
-          {type:"text",text:`Product: ${productName}\nFeatures: ${desc||"see images"}\nBlog URL: ${blogUrl}\n\nBoards available: ${bl}\n\nGenerate ${pinCount} pin concepts. Return ONLY this JSON:\n{"pins":[{"overlay_text":"","title":"","description":"","suggested_board":"","alt_text":""}]}\n\nRules:\n- overlay_text: max 5 punchy words, all different angles\n- title: max 100 chars, keyword-rich\n- description: max 430 chars — Hook. 2-3 eco features. Payoff. "Full review on the blog 🌿". End: "Affiliate link — no extra cost to you 💚". New line + 8-10 hashtags.\n- suggested_board: pick the most relevant board name from the list above\n- alt_text: one descriptive sentence with product name\n- Tone: warm eco-conscious, Green & Glow Living brand`}
+          {type:"text",text:`Product: ${productName}\nFeatures: ${desc||"see images"}\nBlog URL: ${blogUrl}\n\nBoards available: ${bl}\n\nYou MUST generate EXACTLY ${pinCount} pin concepts — no more, no fewer. Return ONLY this JSON with exactly ${pinCount} items in the pins array:\n{"pins":[{"overlay_text":"","title":"","description":"","suggested_board":"","alt_text":""}]}\n\nRules:\n- overlay_text: max 5 punchy words, all different angles\n- title: max 100 chars, keyword-rich\n- description: max 400 chars — Hook. 2-3 eco features. Payoff. "Full review on the blog 🌿". End: "Affiliate link — no extra cost to you 💚". New line + 8-10 hashtags.\n- suggested_board: most relevant board name from the list above\n- alt_text: one descriptive sentence with product name\n- Tone: warm eco-conscious, Green & Glow Living brand`}
         ]}
       ]})
   });
@@ -327,7 +327,16 @@ function App(){
       setProg({msg:"Writing pin content with GPT-4o-mini...",sub:"Generating strategies for "+pinCount+" pins",pct:5});
       const boardNames=boards.map(b=>b.name);
       const analysis=await generateContent(images,name,desc,blogUrl,boardNames,oai,pinCount);
-      const pl=(analysis.pins||[]).slice(0,pinCount);
+      let pl=(analysis.pins||[]).slice(0,pinCount);
+      // If GPT returned fewer than requested, retry once for the missing pins
+      if(pl.length<pinCount){
+        console.log(`GPT returned ${pl.length}/${pinCount} pins — retrying for missing ${pinCount-pl.length}`);
+        try{
+          const missing=pinCount-pl.length;
+          const retry=await generateContent(images,name,desc,blogUrl,boardNames,oai,missing);
+          pl=[...pl,...(retry.pins||[]).slice(0,missing)];
+        }catch(e){console.log("Retry failed:",e.message);}
+      }
       const init=pl.map((p,i)=>({...p,style:STYLES[i]?.label||`Style ${i+1}`,rawB64:null,dataUrl:null,imgbbUrl:null,genStatus:"pending"}));
       setPins(init);
       const work=[...init];

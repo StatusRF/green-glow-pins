@@ -319,6 +319,7 @@ function App(){
     finally{setConn(false);}
   };
 
+  const upd=(arr,i,p)=>{const n=[...arr];n[i]={...n[i],...p};return n;};
   const updatePinField=(idx,field,val)=>setPins(x=>upd(x,idx,{[field]:val}));
 
   // ── Phase 1: Generate images ──────────────────────────────────────────────

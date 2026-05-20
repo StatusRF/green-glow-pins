@@ -4,44 +4,43 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>🌿 Green &amp; Glow Pin Generator</title>
-  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700&family=Lato:wght@400;700&display=swap" rel="stylesheet"/>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     body{background:#FAF6EE;font-family:'Lato',system-ui,sans-serif}
     @keyframes spin{to{transform:rotate(360deg)}}
     @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-    @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
     input:focus,textarea:focus,select:focus{border-color:#1B4D2E!important;box-shadow:0 0 0 3px rgba(27,77,46,0.1);outline:none}
     textarea{font-family:'Lato',system-ui,sans-serif;resize:vertical}
-    select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M0 0l6 8 6-8z' fill='%231B4D2E'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px!important}
+    select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M0 0l6 8 6-8z' fill='%231B4D2E'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
     ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:#C7D9CA;border-radius:3px}
   </style>
 </head>
 <body>
 <div id="root"></div>
 <script type="text/babel">
+
+// ── Constants ────────────────────────────────────────────────────────────────
 const {useState,useRef,useEffect}=React;
 const G="#1B4D2E",GOLD="#C9960C",CREAM="#FAF6EE",DARK="#111A14",MUTED="#6B7F6E";
-const MAX_IMGS=4, AFF_TAG="greenandglow-20";
-
+const AFF_TAG="greenandglow-20",MAX_IMGS=4;
 const STYLES=[
-  {label:"Natural Earthy Flatlay",   scene:"warm terracotta surface, linen fabric, raw wood boards, soft natural light from the side"},
-  {label:"Clean White Minimal",      scene:"bright white marble surface, airy studio light, clean minimal composition, soft shadows"},
-  {label:"Dark Moody Premium",       scene:"deep charcoal stone surface, dramatic side lighting, rich dark tones, cinematic shadow play"},
-  {label:"Warm Lifestyle In-Use",    scene:"golden hour light, warm hands holding or using the product, blurred cozy home background"},
-  {label:"Bright Botanical",         scene:"surrounded by fresh tropical leaves and botanicals, vivid greens, bright natural light"},
-  {label:"Rustic Wooden Shelf",      scene:"natural wooden shelf, warm ambient indoor light, earthy props, soft bokeh background"},
-  {label:"Soft Pastel Dreamy",       scene:"blush pink and sage green tones, hazy soft-focus background, delicate floral accents"},
-  {label:"Outdoor Nature Immersive", scene:"garden setting, dappled sunlight through leaves, natural ground texture, fresh outdoors feel"},
-  {label:"Ingredient Macro",         scene:"surrounded by its key raw ingredients or materials, textured close-up, strong macro lighting"},
-  {label:"Deep Luxury Night",        scene:"warm amber candlelight, rich dark velvet or polished marble surface, luxury evening mood"}
+  {label:"Natural Earthy Flatlay",   scene:"warm terracotta surface, linen fabric, raw wood, soft natural side light"},
+  {label:"Clean White Minimal",      scene:"bright white marble, airy studio light, clean minimal, soft shadows"},
+  {label:"Dark Moody Premium",       scene:"deep charcoal stone, dramatic side lighting, rich dark tones, cinematic shadows"},
+  {label:"Warm Lifestyle In-Use",    scene:"golden hour, warm hands holding the product, blurred cozy home background"},
+  {label:"Bright Botanical",         scene:"fresh tropical leaves and botanicals surrounding product, vivid greens, bright light"},
+  {label:"Rustic Wooden Shelf",      scene:"natural wooden shelf, warm ambient indoor light, earthy props, soft bokeh"},
+  {label:"Soft Pastel Dreamy",       scene:"blush pink and sage green tones, hazy soft-focus, delicate floral accents"},
+  {label:"Outdoor Nature Immersive", scene:"garden setting, dappled sunlight through leaves, natural ground texture"},
+  {label:"Ingredient Macro",         scene:"surrounded by raw ingredients or materials, textured close-up, strong macro lighting"},
+  {label:"Deep Luxury Night",        scene:"warm amber candlelight, rich dark velvet or polished marble, luxury evening mood"}
 ];
 
 // ── Utilities ────────────────────────────────────────────────────────────────
-
 function b64ToBlob(b64,mime){
   const by=atob(b64),a=new Uint8Array(by.length);
   for(let i=0;i<by.length;i++)a[i]=by.charCodeAt(i);
@@ -50,385 +49,476 @@ function b64ToBlob(b64,mime){
 function parseAmazonName(url){
   try{
     const m=url.match(/amazon\.[a-z.]+\/([A-Za-z0-9][A-Za-z0-9-]{3,})\/dp\//i);
-    if(!m||!m[1])return null;
+    if(!m)return null;
     return m[1].replace(/-+/g," ").replace(/\b\w/g,c=>c.toUpperCase()).trim();
   }catch(e){return null;}
 }
-function ensureAffTag(url){
-  if(!url)return"";
-  if(url.includes("tag="+AFF_TAG))return url;
+function ensureTag(url){
+  if(!url||url.includes("tag="+AFF_TAG))return url;
   const base=url.replace(/[?&]tag=[^&]*/g,"").replace(/[?&]$/,"");
   return base+(base.includes("?")?"&":"?")+"tag="+AFF_TAG+"&linkCode=ll2&language=en_US&ref_=as_li_ss_tl";
 }
+function matchBoard(name,boards){
+  if(!name||!boards.length)return null;
+  const n=name.toLowerCase().trim();
+  return boards.find(b=>b.name&&b.name.toLowerCase().trim()===n)||
+         boards.find(b=>b.name&&b.name.toLowerCase().includes(n))||
+         boards.find(b=>b.name&&n.includes(b.name.toLowerCase()))||null;
+}
 
-// ── API calls ────────────────────────────────────────────────────────────────
-
-async function autoDetect(images,amazonUrl,oaiKey){
-  const urlCtx=amazonUrl?`Amazon URL: ${amazonUrl}\n`:"";
-  const r=await fetch("https://api.openai.com/v1/chat/completions",{
-    method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+oaiKey},
+// ── API ──────────────────────────────────────────────────────────────────────
+async function apiAutoDetect(imgs,url,key){
+  const ctx=url?`Amazon URL: ${url}\n`:"";
+  let r;
+  try{r=await fetch("https://api.openai.com/v1/chat/completions",{
+    method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},
     body:JSON.stringify({model:"gpt-4o-mini",max_tokens:200,messages:[{role:"user",content:[
-      ...images.slice(0,2).map(img=>({type:"image_url",image_url:{url:`data:${img.mime};base64,${img.b64}`,detail:"low"}})),
-      {type:"text",text:`${urlCtx}Return ONLY JSON: {"product_name":"exact name from packaging or URL","features":"key eco features, comma separated, max 25 words"}`}
+      ...imgs.slice(0,2).map(img=>({type:"image_url",image_url:{url:`data:${img.mime};base64,${img.b64}`,detail:"low"}})),
+      {type:"text",text:`${ctx}Return ONLY JSON (no markdown): {"product_name":"exact name","features":"key eco features comma separated max 20 words"}`}
     ]}]})
-  });
-  const d=await r.json();if(d.error)throw new Error(d.error.message);
+  });}catch(e){throw new Error("OpenAI unreachable (network/CORS): "+e.message);}
+  const d=await r.json();
+  if(d.error)throw new Error("OpenAI: "+d.error.message);
   return JSON.parse(d.choices[0].message.content.replace(/```json|```/g,"").trim());
 }
 
-async function generateContent(images,productName,desc,blogUrl,boardNames,oaiKey,pinCount){
-  const bl=boardNames.length?boardNames.join(", "):"Eco-Friendly Home, Amazon Eco Finds";
-  const sl=STYLES.slice(0,pinCount).map((s,i)=>`Pin${i+1}: ${s.label}`).join("\n");
-  const r=await fetch("https://api.openai.com/v1/chat/completions",{
-    method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+oaiKey},
-    body:JSON.stringify({model:"gpt-4o-mini",max_tokens:4000,
-      messages:[
-        {role:"system",content:"Pinterest marketing expert for Green & Glow Living eco blog. Return ONLY compact valid JSON."},
-        {role:"user",content:[
-          ...images.map(img=>({type:"image_url",image_url:{url:`data:${img.mime};base64,${img.b64}`,detail:"low"}})),
-          {type:"text",text:`Product: ${productName}\nFeatures: ${desc||"see images"}\nBlog URL: ${blogUrl}\n\nBoards available: ${bl}\n\nYou MUST generate EXACTLY ${pinCount} pin concepts — no more, no fewer. Return ONLY this JSON with exactly ${pinCount} items in the pins array:\n{"pins":[{"overlay_text":"","title":"","description":"","suggested_board":"","alt_text":""}]}\n\nRules:\n- overlay_text: max 5 punchy words, all different angles\n- title: max 100 chars, keyword-rich\n- description: max 400 chars — Hook. 2-3 eco features. Payoff. "Full review on the blog 🌿". End: "Affiliate link — no extra cost to you 💚". New line + 8-10 hashtags.\n- suggested_board: most relevant board name from the list above\n- alt_text: one descriptive sentence with product name\n- Tone: warm eco-conscious, Green & Glow Living brand`}
-        ]}
-      ]})
-  });
-  const d=await r.json();if(d.error)throw new Error("OpenAI: "+d.error.message);
-  return JSON.parse(d.choices[0].message.content.replace(/```json|```/g,"").trim());
+async function apiGenerateContent(imgs,name,desc,blogUrl,boardNames,key,count){
+  const bl=boardNames.join(", ")||"Eco-Friendly Home";
+  const sl=STYLES.slice(0,count).map((s,i)=>`Pin${i+1}: ${s.label}`).join("\n");
+  let r2;
+  try{r2=await fetch("https://api.openai.com/v1/chat/completions",{
+    method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},
+    body:JSON.stringify({model:"gpt-4o-mini",max_tokens:4000,messages:[
+      {role:"system",content:"Pinterest expert for Green & Glow Living eco blog. Return ONLY valid compact JSON."},
+      {role:"user",content:[
+        ...imgs.slice(0,1).map(img=>({type:"image_url",image_url:{url:`data:${img.mime};base64,${img.b64}`,detail:"low"}})),
+        {type:"text",text:`Product: ${name}\nFeatures: ${desc||"see images"}\nBlog URL: ${blogUrl}\nBoards: ${bl}\n\nGenerate EXACTLY ${count} pin concepts. Return ONLY this JSON:\n{"pins":[{"overlay_text":"","title":"","description":"","suggested_board":"","alt_text":""}]}\n\nRules:\n- overlay_text: max 5 punchy words, all different angles\n- title: max 100 chars\n- description: max 400 chars. Hook. 2-3 eco features. Payoff. "Full review on the blog 🌿". New line: "Affiliate link — no extra cost to you 💚". New line + 8-10 hashtags.\n- suggested_board: most relevant board name from the Boards list\n- alt_text: descriptive sentence with product name\n- Tone: warm eco-conscious Green & Glow Living`}
+      ]}
+    ]})
+  });}catch(e){throw new Error("OpenAI unreachable — check internet connection and API key. ("+e.message+")");}
+  const d2=await r2.json();
+  if(d2.error)throw new Error("OpenAI API error: "+d2.error.message+" — check your API key and Organisation Verification.");
+  return JSON.parse(d2.choices[0].message.content.replace(/```json|```/g,"").trim());
 }
 
-async function genImage(images,pinIndex,scene,oaiKey){
+async function apiGenImage(imgs,pinIdx,scene,key){
   const fd=new FormData();
   fd.append("model","gpt-image-1");
-  const primary=images[pinIndex%images.length];
-  images.filter((_,i)=>i!==pinIndex%images.length).forEach((img,i)=>
-    fd.append("image[]",b64ToBlob(img.b64,img.mime),`ref${i}.`+(img.mime.split("/")[1]||"jpg"))
+  const primary=imgs[pinIdx%imgs.length];
+  imgs.filter((_,i)=>i!==pinIdx%imgs.length).forEach((img,i)=>
+    fd.append("image[]",b64ToBlob(img.b64,img.mime),"ref"+i+"."+(img.mime.split("/")[1]||"jpg"))
   );
   fd.append("image[]",b64ToBlob(primary.b64,primary.mime),"main."+(primary.mime.split("/")[1]||"jpg"));
-  fd.append("prompt",`Product photography Pinterest pin. Scene: ${scene}. The exact product from the reference images must be prominently featured with its packaging and branding clearly visible. Portrait orientation. Professional photography. No text, words, or letters in the image.`);
+  fd.append("prompt",`Product photography Pinterest pin. Scene: ${scene}. The exact product from the reference images must be prominently featured, packaging and branding clearly visible. Portrait 1024x1536. No text, words, or letters in image.`);
   fd.append("quality","medium");fd.append("size","1024x1536");fd.append("n","1");
-  const r=await fetch("https://api.openai.com/v1/images/edits",{method:"POST",headers:{Authorization:"Bearer "+oaiKey},body:fd});
-  const d=await r.json();if(d.error)throw new Error("OpenAI image: "+d.error.message);
+  const r=await fetch("https://api.openai.com/v1/images/edits",{method:"POST",headers:{Authorization:"Bearer "+key},body:fd});
+  const d=await r.json();
+  if(d.error)throw new Error("gpt-image-1: "+d.error.message);
   return d.data[0].b64_json;
 }
 
-async function uploadImgBB(b64,key){
+async function apiUploadImgBB(b64,key){
   const fd=new FormData();fd.append("key",key);fd.append("image",b64);
   const r=await fetch("https://api.imgbb.com/1/upload",{method:"POST",body:fd});
-  const d=await r.json();if(!d.success)throw new Error("ImgBB: "+(d.error?.message||"upload failed"));
+  const d=await r.json();
+  if(!d.success)throw new Error("ImgBB: "+(d.error?.message||"upload failed"));
   return d.data.url;
 }
 
-async function verifyTailwind(key){
+async function apiVerifyTailwind(key){
   const r=await fetch("https://api-v1.tailwind.ai/v1/accounts",{headers:{Authorization:"Bearer "+key}});
-  if(!r.ok)throw new Error("Tailwind key invalid");
-  const d=await r.json();if(!d.data?.accounts?.length)throw new Error("No Pinterest accounts found");
+  if(!r.ok)throw new Error("Tailwind key invalid (status "+r.status+")");
+  const d=await r.json();
+  if(!d.data?.accounts?.length)throw new Error("No Pinterest accounts in Tailwind");
   return d.data.accounts[0];
 }
-async function getBoards(aid,key){
+async function apiGetBoards(aid,key){
   const r=await fetch(`https://api-v1.tailwind.ai/v1/accounts/${aid}/boards`,{headers:{Authorization:"Bearer "+key}});
-  const d=await r.json();return(d.data?.boards||[]).filter(b=>!b.isSecret);
+  const d=await r.json();
+  return(d.data?.boards||[]).filter(b=>!b.isSecret);
 }
-async function createPost(aid,key,{mediaUrl,title,description,url,boardId,altText}){
+async function apiCreatePost(aid,key,{mediaUrl,title,description,url,boardId,altText}){
   const body={mediaUrl,title,description,url};
   if(boardId)body.boardId=boardId;
-  // Send alt text both ways to cover API variations
   if(altText){body.altText=altText;body.alt_text=altText;}
   const r=await fetch(`https://api-v1.tailwind.ai/v1/accounts/${aid}/posts`,{
     method:"POST",headers:{Authorization:"Bearer "+key,"Content-Type":"application/json"},
     body:JSON.stringify(body)
   });
-  const d=await r.json();if(!d.data?.post)throw new Error("Tailwind: "+(d.error?.message||"post failed"));
+  const d=await r.json();
+  if(!d.data?.post)throw new Error("Tailwind: "+(d.error?.message||"post failed"));
   return d.data.post.id;
 }
-async function deletePost(aid,pid,key){
-  await fetch(`https://api-v1.tailwind.ai/v1/accounts/${aid}/posts/${pid}`,{method:"DELETE",headers:{Authorization:"Bearer "+key}});
+async function apiDeletePost(aid,pid,key){
+  await fetch(`https://api-v1.tailwind.ai/v1/accounts/${aid}/posts/${pid}`,{
+    method:"DELETE",headers:{Authorization:"Bearer "+key}
+  });
 }
 
 // ── Canvas ───────────────────────────────────────────────────────────────────
-
-async function compositePin(rawB64,overlayText){
-  try{await document.fonts.load('700 32px "Fraunces"');}catch(e){}
-  return new Promise(resolve=>{
+async function makePin(rawB64,overlayText){
+  if(!rawB64)throw new Error("No image data");
+  const text=overlayText||"Green & Glow";
+  try{await document.fonts.load('700 44px "Fraunces"');}catch(e){}
+  return new Promise((resolve,reject)=>{
     const canvas=document.createElement("canvas");
     canvas.width=1024;canvas.height=1536;
-    const ctx=canvas.getContext("2d"),img=new Image();
+    const ctx=canvas.getContext("2d");
+    if(!ctx){reject(new Error("Canvas not supported"));return;}
+    const img=new Image();
+    img.onerror=()=>reject(new Error("Image failed to load"));
     img.onload=()=>{
-      ctx.drawImage(img,0,0,1024,1536);
-      const g1=ctx.createLinearGradient(0,970,0,1536);
-      g1.addColorStop(0,"rgba(0,0,0,0)");g1.addColorStop(1,"rgba(10,22,12,0.92)");
-      ctx.fillStyle=g1;ctx.fillRect(0,970,1024,566);
-      const g2=ctx.createLinearGradient(0,0,0,130);
-      g2.addColorStop(0,"rgba(0,0,0,0.30)");g2.addColorStop(1,"rgba(0,0,0,0)");
-      ctx.fillStyle=g2;ctx.fillRect(0,0,1024,130);
-      ctx.strokeStyle=GOLD;ctx.lineWidth=4;
-      ctx.beginPath();ctx.moveTo(130,1268);ctx.lineTo(894,1268);ctx.stroke();
-      const up=overlayText.toUpperCase(),ws=up.split(" ");
-      const lines=ws.length<=2?[up]:ws.length===3?[ws.slice(0,2).join(" "),ws[2]]:[ws.slice(0,Math.ceil(ws.length/2)).join(" "),ws.slice(Math.ceil(ws.length/2)).join(" ")];
-      const fs=up.length>22?70:up.length>14?84:96;
-      ctx.font=`bold ${fs}px Georgia,serif`;
-      ctx.textAlign="center";ctx.textBaseline="middle";
-      ctx.shadowColor="rgba(0,0,0,0.65)";ctx.shadowBlur=26;ctx.shadowOffsetY=3;
-      ctx.fillStyle="#fff";
-      const lh=fs*1.25,sy=1375-(lines.length*lh)/2;
-      lines.forEach((l,i)=>ctx.fillText(l,512,sy+i*lh));
-      // ── Branding strip — cream background so green always shows ──
-      ctx.fillStyle="rgba(250,246,238,0.93)";
-      ctx.fillRect(0,1468,1024,68);
-      // Gold accent line above strip
-      ctx.strokeStyle=GOLD;ctx.lineWidth=2;
-      ctx.beginPath();ctx.moveTo(0,1468);ctx.lineTo(1024,1468);ctx.stroke();
-      // "Green & Glow Living" in Fraunces, forest green, always
-      ctx.shadowBlur=0;ctx.shadowOffsetY=0;ctx.textAlign="center";ctx.textBaseline="middle";
-      const ff=document.fonts.check('700 44px "Fraunces"');
-      ctx.font=ff?'700 44px "Fraunces"':"700 40px Georgia,serif";
-      ctx.fillStyle=G;
-      ctx.fillText("Green & Glow Living",512,1502);
-      resolve(canvas.toDataURL("image/jpeg",0.92));
+      try{
+        ctx.drawImage(img,0,0,1024,1536);
+        // Bottom gradient
+        const g1=ctx.createLinearGradient(0,970,0,1460);
+        g1.addColorStop(0,"rgba(0,0,0,0)");g1.addColorStop(1,"rgba(10,22,12,0.90)");
+        ctx.fillStyle=g1;ctx.fillRect(0,970,1024,490);
+        // Top gradient
+        const g2=ctx.createLinearGradient(0,0,0,120);
+        g2.addColorStop(0,"rgba(0,0,0,0.28)");g2.addColorStop(1,"rgba(0,0,0,0)");
+        ctx.fillStyle=g2;ctx.fillRect(0,0,1024,120);
+        // Gold accent line
+        ctx.strokeStyle=GOLD;ctx.lineWidth=4;
+        ctx.beginPath();ctx.moveTo(130,1250);ctx.lineTo(894,1250);ctx.stroke();
+        // Overlay text
+        const up=text.toUpperCase();
+        const ws=up.split(" ");
+        const lines=ws.length<=2?[up]:ws.length===3?[ws.slice(0,2).join(" "),ws[2]]:
+          [ws.slice(0,Math.ceil(ws.length/2)).join(" "),ws.slice(Math.ceil(ws.length/2)).join(" ")];
+        const fs=up.length>22?68:up.length>14?82:96;
+        ctx.font=`bold ${fs}px Georgia,serif`;
+        ctx.textAlign="center";ctx.textBaseline="middle";
+        ctx.shadowColor="rgba(0,0,0,0.65)";ctx.shadowBlur=24;ctx.shadowOffsetY=3;
+        ctx.fillStyle="#fff";
+        const lh=fs*1.25,sy=1355-(lines.length*lh)/2;
+        lines.forEach((l,i)=>ctx.fillText(l,512,sy+i*lh));
+        // Cream branding strip
+        ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+        ctx.fillStyle="rgba(250,246,238,0.94)";
+        ctx.fillRect(0,1465,1024,71);
+        ctx.strokeStyle=GOLD;ctx.lineWidth=2;
+        ctx.beginPath();ctx.moveTo(0,1465);ctx.lineTo(1024,1465);ctx.stroke();
+        // Branding text
+        ctx.textAlign="center";ctx.textBaseline="middle";
+        const useFraunces=document.fonts.check('700 44px "Fraunces"');
+        ctx.font=useFraunces?'700 44px "Fraunces"':"700 40px Georgia,serif";
+        ctx.fillStyle=G;
+        ctx.fillText("Green & Glow Living",512,1501);
+        resolve(canvas.toDataURL("image/jpeg",0.92));
+      }catch(err){reject(err);}
     };
     img.src="data:image/png;base64,"+rawB64;
   });
 }
 
-// ── Small UI ─────────────────────────────────────────────────────────────────
+// ── Error Boundary ───────────────────────────────────────────────────────────
+class ErrorBoundary extends React.Component{
+  constructor(p){super(p);this.state={err:null};}
+  static getDerivedStateFromError(e){return{err:e};}
+  render(){
+    if(this.state.err)return(
+      <div style={{padding:32,maxWidth:600,margin:"40px auto",fontFamily:"system-ui"}}>
+        <div style={{background:"#FFF3F3",border:"1px solid #FFB8B8",borderRadius:10,padding:24}}>
+          <div style={{fontWeight:700,color:"#C00",fontSize:16,marginBottom:8}}>⚠️ Error — please report this</div>
+          <div style={{fontSize:12,color:"#555",fontFamily:"monospace",whiteSpace:"pre-wrap",marginBottom:16}}>{this.state.err.toString()}</div>
+          <button onClick={()=>window.location.reload()}
+            style={{background:G,color:"#fff",border:"none",borderRadius:7,padding:"10px 20px",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+            Reload
+          </button>
+        </div>
+      </div>
+    );
+    return this.props.children;
+  }
+}
 
+// ── Small components ─────────────────────────────────────────────────────────
+function Spinner({color="#fff",size=14}){
+  return <div style={{width:size,height:size,border:"2px solid rgba(128,128,128,0.2)",borderTopColor:color,borderRadius:"50%",animation:"spin .7s linear infinite",display:"inline-block",flexShrink:0}}/>;
+}
 function CopyBtn({text}){
   const[ok,setOk]=useState(false);
-  return<button onClick={()=>{navigator.clipboard.writeText(text);setOk(true);setTimeout(()=>setOk(false),1500)}}
-    style={{background:ok?G:"transparent",color:ok?"#fff":GOLD,border:`1.5px solid ${ok?G:GOLD}`,borderRadius:5,padding:"3px 12px",fontSize:11,fontWeight:700,cursor:"pointer",transition:"all .2s"}}>
-    {ok?"✓ Copied":"Copy"}</button>;
+  const copy=()=>{try{navigator.clipboard.writeText(text||"");}catch(e){}setOk(true);setTimeout(()=>setOk(false),1500);};
+  return <button onClick={copy} style={{background:ok?G:"transparent",color:ok?"#fff":GOLD,border:`1.5px solid ${ok?G:GOLD}`,borderRadius:5,padding:"3px 12px",fontSize:11,fontWeight:700,cursor:"pointer",transition:"all .2s"}}>{ok?"✓ Copied":"Copy"}</button>;
 }
-function EditField({label,value,onChange,multiline=false}){
-  return<div style={{borderTop:"1px solid #EDF2EE",padding:"12px 18px"}}>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-      <span style={{fontSize:10,fontWeight:700,color:G,textTransform:"uppercase",letterSpacing:"0.1em"}}>{label}</span>
-      <CopyBtn text={value}/>
+function EditField({label,value,onChange,rows}){
+  const isTA=rows>1;
+  const baseStyle={width:"100%",padding:"8px 10px",borderRadius:7,border:"1.5px solid #C7D9CA",background:"#FAFCFA",fontSize:13,color:"#444",lineHeight:1.6,fontFamily:"system-ui",outline:"none",boxSizing:"border-box"};
+  return(
+    <div style={{borderTop:"1px solid #EDF2EE",padding:"12px 18px"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+        <span style={{fontSize:10,fontWeight:700,color:G,textTransform:"uppercase",letterSpacing:"0.1em"}}>{label}</span>
+        <CopyBtn text={value||""}/>
+      </div>
+      {isTA
+        ?<textarea rows={rows||4} value={value||""} onChange={e=>{try{onChange(e.target.value);}catch(err){}}} style={{...baseStyle,resize:"vertical"}}/>
+        :<input value={value||""} onChange={e=>{try{onChange(e.target.value);}catch(err){}}} style={baseStyle}/>
+      }
     </div>
-    {multiline
-      ?<textarea value={value} onChange={e=>onChange(e.target.value)} rows={5}
-          style={{width:"100%",padding:"8px 10px",borderRadius:7,border:"1.5px solid #C7D9CA",background:"#FAFCFA",fontSize:13,color:"#444",lineHeight:1.6,fontFamily:"system-ui",resize:"vertical",outline:"none",boxSizing:"border-box"}}/>
-      :<input value={value} onChange={e=>onChange(e.target.value)}
-          style={{width:"100%",padding:"8px 10px",borderRadius:7,border:"1.5px solid #C7D9CA",background:"#FAFCFA",fontSize:13,color:"#444",fontFamily:"system-ui",outline:"none",boxSizing:"border-box"}}/>
-    }
-  </div>;
-}
-function Sp({color="#fff",size=14}){
-  return<div style={{width:size,height:size,border:`2px solid rgba(128,128,128,0.2)`,borderTopColor:color,borderRadius:"50%",animation:"spin .7s linear infinite",display:"inline-block",flexShrink:0}}/>;
+  );
 }
 
 // ── Main App ─────────────────────────────────────────────────────────────────
-
 function App(){
-  // Keys & connection
+  // API keys
   const[oai,setOai]=useState(()=>localStorage.getItem("gg_oai")||"");
   const[tw,setTw]=useState(()=>localStorage.getItem("gg_tw")||"");
   const[ibb,setIbb]=useState(()=>localStorage.getItem("gg_ibb")||"");
   const[saveKeys,setSaveKeys]=useState(true);
+  // Connection
+  const[step,setStep]=useState("setup");
   const[conn,setConn]=useState(false);
   const[connErr,setConnErr]=useState("");
-  const[acc,setAcc]=useState(null);
+  const[account,setAccount]=useState(null);
   const[boards,setBoards]=useState([]);
-
-  // Product inputs
-  const[step,setStep]=useState("setup");
+  // Product form
   const[amazonUrl,setAmazonUrl]=useState("");
   const[images,setImages]=useState([]);
   const[detecting,setDetecting]=useState(false);
-  const[name,setName]=useState("");
-  const[desc,setDesc]=useState("");
+  const[prodName,setProdName]=useState("");
+  const[prodDesc,setProdDesc]=useState("");
   const[blogUrl,setBlogUrl]=useState("https://greenandglowliving.com/");
   const[pinCount,setPinCount]=useState(10);
-
-  // Generation state
+  const[formErr,setFormErr]=useState("");
+  // Generation
   const[prog,setProg]=useState({msg:"",sub:"",pct:0});
-  const[pins,setPins]=useState([]);    // [{overlay_text,title,description,suggested_board,alt_text,rawB64,dataUrl,imgbbUrl,genStatus}]
+  const[pins,setPins]=useState([]);
   const[active,setActive]=useState(0);
-  const[err,setErr]=useState("");
-
-  // Tailwind push state — board selection is here, not in generation
-  const[pinBoards,setPinBoards]=useState({});   // {pinIndex: boardId}
-  const[pushStatus,setPushStatus]=useState({}); // {pinIndex: 'pushing'|'done'|'failed'}
+  // Overlay text edit
+  const[overlayEdit,setOverlayEdit]=useState("");
+  const[overlayBusy,setOverlayBusy]=useState(false);
+  // Tailwind push
+  const[pinBoards,setPinBoards]=useState({});
+  const[pushStatus,setPushStatus]=useState({});
   const[pushingAll,setPushingAll]=useState(false);
+  // Regen
+  const[regenIdx,setRegenIdx]=useState(null);
 
-  // Edit overlay
-  const[etxt,setEtxt]=useState("");
-  const[ebusy,setEbusy]=useState(false);
-  const[regen,setRegen]=useState(null);
+  const fileRef=useRef(null);
+  const detectTimer=useRef(null);
 
-  const fref=useRef(null),detectRef=useRef(null);
-
-  useEffect(()=>{if(pins[active])setEtxt(pins[active].overlay_text||"");},[active]);
-
-  // Pre-select boards from GPT suggestion when pins change
+  // Sync overlay edit text when active pin changes
   useEffect(()=>{
-    if(!pins.length||!boards.length)return;
-    setPinBoards(prev=>{
-      const next={...prev};
-      pins.forEach((p,i)=>{
-        if(next[i])return; // don't override user selection
-        if(!p.suggested_board)return;
-        const lower=p.suggested_board.toLowerCase();
-        const match=boards.find(b=>b.name.toLowerCase()===lower)||
-                     boards.find(b=>b.name.toLowerCase().includes(lower))||
-                     boards.find(b=>lower.includes(b.name.toLowerCase()));
-        if(match)next[i]=match.id;
-      });
+    if(pins[active])setOverlayEdit(pins[active].overlay_text||"");
+  },[active]);
+
+  // Helper: update one field of one pin
+  function updPin(idx,patch){
+    setPins(prev=>{
+      const next=[...prev];
+      next[idx]={...next[idx],...patch};
       return next;
     });
-  },[pins,boards]);
+  }
 
-  const handleFile=async(files)=>{
+  // Handle image file selection
+  async function handleFiles(files){
     const toAdd=Array.from(files).slice(0,MAX_IMGS-images.length);
-    const newImgs=await Promise.all(toAdd.map(f=>new Promise(res=>{
+    const loaded=await Promise.all(toAdd.map(f=>new Promise(res=>{
       const r=new FileReader();
       r.onload=ev=>res({b64:ev.target.result.split(",")[1],mime:f.type||"image/jpeg",preview:ev.target.result});
       r.readAsDataURL(f);
     })));
-    const combined=[...images,...newImgs].slice(0,MAX_IMGS);
+    const combined=[...images,...loaded].slice(0,MAX_IMGS);
     setImages(combined);
     if(combined.length&&oai){
-      clearTimeout(detectRef.current);
-      detectRef.current=setTimeout(()=>runDetect(combined,amazonUrl),500);
+      clearTimeout(detectTimer.current);
+      detectTimer.current=setTimeout(()=>runDetect(combined,amazonUrl),600);
     }
-  };
+  }
 
-  const onAmazonUrl=async(url)=>{
+  // Handle Amazon URL paste
+  function handleAmazonUrl(url){
     setAmazonUrl(url);
-    if(!url.includes("amazon."))return;
     const parsed=parseAmazonName(url);
-    if(parsed&&!name)setName(parsed);
-    if(images.length&&oai){
-      clearTimeout(detectRef.current);
-      detectRef.current=setTimeout(()=>runDetect(images,url),800);
+    if(parsed&&!prodName)setProdName(parsed);
+    if(images.length&&oai&&url.includes("amazon.")){
+      clearTimeout(detectTimer.current);
+      detectTimer.current=setTimeout(()=>runDetect(images,url),800);
     }
-  };
+  }
 
-  const runDetect=async(imgs,url)=>{
+  // Auto-detect product from image + URL
+  async function runDetect(imgs,url){
     if(!oai||!imgs.length)return;
     setDetecting(true);
-    try{const r=await autoDetect(imgs,url,oai);if(r.product_name)setName(r.product_name);if(r.features)setDesc(r.features);}
-    catch(e){console.log("Auto-detect:",e.message);}
+    try{
+      const r=await apiAutoDetect(imgs,url,oai);
+      if(r.product_name)setProdName(r.product_name);
+      if(r.features)setProdDesc(r.features);
+    }catch(e){/* silent */}
     finally{setDetecting(false);}
-  };
+  }
 
-  const connect=async()=>{
+  const[testResult,setTestResult]=useState("");
+  const[testing,setTesting]=useState(false);
+
+  async function testApiKey(){
+    if(!oai){setTestResult("❌ No OpenAI key entered");return;}
+    setTesting(true);setTestResult("");
+    try{
+      const r=await fetch("https://api.openai.com/v1/models",{headers:{Authorization:"Bearer "+oai}});
+      if(r.ok){setTestResult("✅ OpenAI reachable — key works");}
+      else if(r.status===401){setTestResult("❌ Key invalid or expired — check platform.openai.com");}
+      else if(r.status===429){setTestResult("❌ Rate limited or no credits — add credits at platform.openai.com/settings/billing");}
+      else{setTestResult("⚠️ OpenAI returned status "+r.status);}
+    }catch(e){
+      setTestResult("❌ Cannot reach api.openai.com — check: 1) browser extensions (disable uBlock/VPN) 2) network firewall 3) try a different browser");
+    }
+    finally{setTesting(false);}
+  }
     setConn(true);setConnErr("");
     try{
       if(saveKeys){localStorage.setItem("gg_oai",oai);localStorage.setItem("gg_tw",tw);localStorage.setItem("gg_ibb",ibb);}
-      const a=await verifyTailwind(tw);
-      const b=await getBoards(a.id,tw);
-      setAcc(a);setBoards(b);setStep("input");
+      const acc=await apiVerifyTailwind(tw);
+      const bds=await apiGetBoards(acc.id,tw);
+      setAccount(acc);setBoards(bds);setStep("input");
     }catch(e){setConnErr(e.message);}
     finally{setConn(false);}
-  };
+  }
 
-  const upd=(arr,i,p)=>{const n=[...arr];n[i]={...n[i],...p};return n;};
-  const updatePinField=(idx,field,val)=>setPins(x=>upd(x,idx,{[field]:val}));
-
-  // ── Phase 1: Generate images ──────────────────────────────────────────────
-  const generate=async()=>{
-    if(!images.length){setErr("Upload at least one product image.");return;}
-    if(!name.trim()){setErr("Product name is required.");return;}
-    if(!blogUrl.trim()||blogUrl==="https://greenandglowliving.com/"){setErr("Enter your specific blog post URL.");return;}
-    setStep("generating");setErr("");setPushStatus({});setPinBoards({});
+  // PHASE 1: Generate images
+  async function generate(){
+    if(!images.length){setFormErr("Upload at least one product image.");return;}
+    if(!prodName.trim()){setFormErr("Product name is required.");return;}
+    if(!blogUrl.trim()||blogUrl==="https://greenandglowliving.com/"){setFormErr("Enter the specific blog post URL.");return;}
+    setStep("generating");setFormErr("");setPushStatus({});setPinBoards({});
     try{
-      setProg({msg:"Writing pin content with GPT-4o-mini...",sub:"Generating strategies for "+pinCount+" pins",pct:5});
-      const boardNames=boards.map(b=>b.name);
-      const analysis=await generateContent(images,name,desc,blogUrl,boardNames,oai,pinCount);
+      setProg({msg:"Writing pin content...",sub:"GPT-4o-mini generating "+pinCount+" strategies",pct:4});
+      const boardNames=boards.map(b=>b.name).filter(Boolean);
+      const analysis=await apiGenerateContent(images,prodName,prodDesc,blogUrl,boardNames,oai,pinCount);
       let pl=(analysis.pins||[]).slice(0,pinCount);
-      // If GPT returned fewer than requested, retry once for the missing pins
+      // Retry if GPT returned fewer than requested
       if(pl.length<pinCount){
-        console.log(`GPT returned ${pl.length}/${pinCount} pins — retrying for missing ${pinCount-pl.length}`);
         try{
-          const missing=pinCount-pl.length;
-          const retry=await generateContent(images,name,desc,blogUrl,boardNames,oai,missing);
-          pl=[...pl,...(retry.pins||[]).slice(0,missing)];
-        }catch(e){console.log("Retry failed:",e.message);}
+          const retry=await apiGenerateContent(images,prodName,prodDesc,blogUrl,boardNames,oai,pinCount-pl.length);
+          pl=[...pl,...(retry.pins||[]).slice(0,pinCount-pl.length)];
+        }catch(e){}
       }
-      const init=pl.map((p,i)=>({...p,style:STYLES[i]?.label||`Style ${i+1}`,rawB64:null,dataUrl:null,imgbbUrl:null,genStatus:"pending"}));
+      // Pre-select boards from GPT suggestions
+      const preBoards={};
+      pl.forEach((p,i)=>{
+        const m=matchBoard(p.suggested_board||"",boards);
+        if(m&&m.id)preBoards[i]=m.id;
+      });
+      setPinBoards(preBoards);
+      // Init pin state
+      const init=pl.map((p,i)=>({
+        overlay_text:p.overlay_text||"",
+        title:p.title||"",
+        description:p.description||"",
+        alt_text:p.alt_text||"",
+        suggested_board:p.suggested_board||"",
+        style:STYLES[i]?.label||`Style ${i+1}`,
+        rawB64:null,dataUrl:null,imgbbUrl:null,
+        genStatus:"pending",error:null
+      }));
       setPins(init);
-      const work=[...init];
+      setActive(0);
+      // Generate each pin image
       for(let i=0;i<pl.length;i++){
         const s=STYLES[i]||{scene:"clean product photography"};
-        const pct=Math.round(5+(i/pl.length)*88);
-        // Generate image
-        work[i]={...work[i],genStatus:"generating"};setPins([...work]);
+        const pct=Math.round(6+(i/pl.length)*88);
+        updPin(i,{genStatus:"generating"});
         setProg({msg:`Pin ${i+1}/${pl.length} — ${s.label}`,sub:"Generating with gpt-image-1...",pct});
         let rawB64;
-        try{rawB64=await genImage(images,i,s.scene,oai);}
-        catch(e){work[i]={...work[i],genStatus:"failed",error:e.message};setPins([...work]);continue;}
-        // Composite + upload
-        setProg({msg:`Pin ${i+1}/${pl.length} — ${s.label}`,sub:"Compositing + hosting image...",pct:pct+2});
-        const dataUrl=await compositePin(rawB64,pl[i].overlay_text);
+        try{rawB64=await apiGenImage(images,i,s.scene,oai);}
+        catch(e){updPin(i,{genStatus:"failed",error:e.message});continue;}
+        setProg({msg:`Pin ${i+1}/${pl.length} — ${s.label}`,sub:"Compositing and hosting...",pct:pct+2});
+        let dataUrl;
+        try{dataUrl=await makePin(rawB64,pl[i].overlay_text);}
+        catch(e){updPin(i,{genStatus:"failed",error:"Canvas: "+e.message});continue;}
         let imgbbUrl;
-        try{imgbbUrl=await uploadImgBB(dataUrl.split(",")[1],ibb);}
-        catch(e){work[i]={...work[i],rawB64,dataUrl,genStatus:"failed",error:e.message};setPins([...work]);continue;}
-        work[i]={...work[i],rawB64,dataUrl,imgbbUrl,genStatus:"ready"};
-        setPins([...work]);
+        try{imgbbUrl=await apiUploadImgBB(dataUrl.split(",")[1],ibb);}
+        catch(e){updPin(i,{genStatus:"failed",error:e.message});continue;}
+        updPin(i,{rawB64,dataUrl,imgbbUrl,genStatus:"ready"});
       }
-      setActive(0);setStep("results");
-    }catch(e){setErr(e.message);setStep("input");}
-  };
+      setStep("results");
+    }catch(e){setFormErr(e.message);setStep("input");}
+  }
 
-  // ── Phase 2: Push to Tailwind with confirmed board selections ─────────────
-  const pushPin=async(idx)=>{
+  // Apply edited overlay text (recomposite only, no new API image call)
+  async function applyOverlay(){
+    const p=pins[active];
+    if(!p||!p.rawB64)return;
+    if(overlayEdit===p.overlay_text)return;
+    setOverlayBusy(true);
+    try{
+      const dataUrl=await makePin(p.rawB64,overlayEdit);
+      const imgbbUrl=await apiUploadImgBB(dataUrl.split(",")[1],ibb);
+      updPin(active,{overlay_text:overlayEdit,dataUrl,imgbbUrl});
+      setPushStatus(ps=>({...ps,[active]:undefined}));
+    }catch(e){alert("Error applying text: "+e.message);}
+    finally{setOverlayBusy(false);}
+  }
+
+  // Regenerate one pin image
+  async function regenPin(idx){
+    if(regenIdx!==null)return;
+    setRegenIdx(idx);
     const p=pins[idx];
-    if(!p.imgbbUrl){alert(`Pin ${idx+1} image not ready.`);return;}
+    try{
+      updPin(idx,{genStatus:"generating",error:null});
+      const s=STYLES[idx]||{scene:"clean product photography"};
+      const rawB64=await apiGenImage(images,idx,s.scene,oai);
+      const dataUrl=await makePin(rawB64,p.overlay_text);
+      const imgbbUrl=await apiUploadImgBB(dataUrl.split(",")[1],ibb);
+      updPin(idx,{rawB64,dataUrl,imgbbUrl,genStatus:"ready",error:null});
+      setPushStatus(ps=>({...ps,[idx]:undefined}));
+    }catch(e){updPin(idx,{genStatus:"failed",error:e.message});}
+    finally{setRegenIdx(null);}
+  }
+
+  // PHASE 2: Push one pin to Tailwind
+  async function pushPin(idx){
+    const p=pins[idx];
+    if(!p.imgbbUrl){alert("Image not ready for pin "+(idx+1));return;}
     setPushStatus(ps=>({...ps,[idx]:"pushing"}));
     try{
-      // Delete old post if exists
-      if(p.twId){try{await deletePost(acc.id,p.twId,tw);}catch(e){}}
-      const tid=await createPost(acc.id,tw,{
+      if(p.twId){try{await apiDeletePost(account.id,p.twId,tw);}catch(e){}}
+      const tid=await apiCreatePost(account.id,tw,{
         mediaUrl:p.imgbbUrl,title:p.title,description:p.description,
         url:blogUrl,boardId:pinBoards[idx]||undefined,altText:p.alt_text
       });
-      setPins(x=>upd(x,idx,{twId:tid}));
+      updPin(idx,{twId:tid});
       setPushStatus(ps=>({...ps,[idx]:"done"}));
-    }catch(e){setPushStatus(ps=>({...ps,[idx]:"failed"}));alert(`Pin ${idx+1} failed: `+e.message);}
-  };
+    }catch(e){
+      setPushStatus(ps=>({...ps,[idx]:"failed"}));
+      alert("Pin "+(idx+1)+" failed: "+e.message);
+    }
+  }
 
-  const pushAll=async()=>{
+  // Push all ready pins
+  async function pushAll(){
     setPushingAll(true);
-    const ready=pins.map((_,i)=>i).filter(i=>pins[i].imgbbUrl&&pushStatus[i]!=="done");
-    for(const i of ready)await pushPin(i);
+    const todo=pins.map((_,i)=>i).filter(i=>pins[i].imgbbUrl&&pushStatus[i]!=="done");
+    for(const i of todo)await pushPin(i);
     setPushingAll(false);
-  };
+  }
 
-  // ── Regen single pin ──────────────────────────────────────────────────────
-  const regenPin=async(idx)=>{
-    if(regen!==null)return;setRegen(idx);
-    const p=pins[idx];
-    try{
-      setPins(x=>upd(x,idx,{genStatus:"generating",error:null}));
-      const s=STYLES[idx]||{scene:"clean product photography"};
-      const rawB64=await genImage(images,idx,s.scene,oai);
-      const dataUrl=await compositePin(rawB64,p.overlay_text);
-      const imgbbUrl=await uploadImgBB(dataUrl.split(",")[1],ibb);
-      setPins(x=>upd(x,idx,{rawB64,dataUrl,imgbbUrl,genStatus:"ready"}));
-      setPushStatus(ps=>({...ps,[idx]:undefined}));
-    }catch(e){setPins(x=>upd(x,idx,{genStatus:"failed",error:e.message}));}
-    finally{setRegen(null);}
-  };
+  // Reset for new product
+  function newProduct(){
+    setPins([]);setImages([]);setProdName("");setProdDesc("");
+    setAmazonUrl("");setBlogUrl("https://greenandglowliving.com/");
+    setPushStatus({});setPinBoards({});setFormErr("");setOverlayEdit("");
+    setStep("input");
+  }
 
-  // ── Apply edited overlay text ─────────────────────────────────────────────
-  const applyEdit=async()=>{
-    const p=pins[active];if(!p.rawB64||etxt===p.overlay_text)return;
-    setEbusy(true);
-    try{
-      const dataUrl=await compositePin(p.rawB64,etxt);
-      const imgbbUrl=await uploadImgBB(dataUrl.split(",")[1],ibb);
-      setPins(x=>upd(x,active,{overlay_text:etxt,dataUrl,imgbbUrl}));
-      setPushStatus(ps=>({...ps,[active]:undefined}));
-    }catch(e){alert("Error: "+e.message);}
-    finally{setEbusy(false);}
-  };
+  function dl(p,i){
+    if(!p.dataUrl)return;
+    const a=document.createElement("a");a.href=p.dataUrl;a.download=`gg-pin-${i+1}.jpg`;a.click();
+  }
 
-  const dl=(p,i)=>{if(!p.dataUrl)return;const a=document.createElement("a");a.href=p.dataUrl;a.download=`green-glow-pin-${i+1}.jpg`;a.click();};
-
+  // ── Shared styles ──────────────────────────────────────────────────────────
   const inp={width:"100%",padding:"10px 14px",borderRadius:8,border:"1.5px solid #C7D9CA",background:"#fff",fontSize:14,color:DARK,outline:"none",boxSizing:"border-box",fontFamily:"'Lato',system-ui"};
   const lbl={display:"block",fontSize:11,fontWeight:700,color:G,marginBottom:5,letterSpacing:"0.08em",textTransform:"uppercase"};
-  const PB={background:G,color:"#fff",border:"none",borderRadius:8,padding:"13px 22px",fontSize:14,fontWeight:700,cursor:"pointer",width:"100%",fontFamily:"'Lato',sans-serif"};
+  const PB={background:G,color:"#fff",border:"none",borderRadius:8,padding:"13px 22px",fontSize:14,fontWeight:700,cursor:"pointer",width:"100%"};
 
   const readyCount=pins.filter(p=>p.imgbbUrl).length;
   const doneCount=Object.values(pushStatus).filter(s=>s==="done").length;
 
+  // ── Render ─────────────────────────────────────────────────────────────────
   return(
     <div style={{minHeight:"100vh",background:CREAM}}>
       {/* Header */}
@@ -436,7 +526,7 @@ function App(){
         <div style={{width:36,height:36,borderRadius:"50%",background:GOLD,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17}}>🌿</div>
         <div>
           <div style={{color:"#fff",fontWeight:700,fontSize:16,fontFamily:"'Fraunces',Georgia,serif"}}>Green &amp; Glow Pin Generator</div>
-          <div style={{color:"rgba(255,255,255,0.5)",fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase"}}>gpt-image-1 · Real Board Selector · Tailwind</div>
+          <div style={{color:"rgba(255,255,255,0.5)",fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase"}}>gpt-image-1 · ImgBB · Tailwind</div>
         </div>
         {step==="results"&&doneCount>0&&(
           <div style={{marginLeft:"auto",background:"#E6F4EA",color:"#1B5E20",fontSize:12,fontWeight:700,padding:"4px 12px",borderRadius:20}}>✓ {doneCount} in Tailwind</div>
@@ -448,8 +538,8 @@ function App(){
         {/* ── SETUP ── */}
         {step==="setup"&&(
           <div style={{animation:"fadeIn .3s ease"}}>
-            <h1 style={{fontFamily:"'Fraunces',Georgia,serif",color:G,fontSize:24,margin:"0 0 6px"}}>Full pipeline. Real boards.</h1>
-            <p style={{color:MUTED,fontSize:14,lineHeight:1.75,margin:"0 0 18px"}}>Generate images → choose boards from your real Tailwind list → push. No more guessing.</p>
+            <h1 style={{fontFamily:"'Fraunces',Georgia,serif",color:G,fontSize:24,margin:"0 0 6px"}}>Green &amp; Glow Pin Generator</h1>
+            <p style={{color:MUTED,fontSize:14,lineHeight:1.75,margin:"0 0 18px"}}>Paste Amazon URL + upload product images → GPT writes 10 pin strategies → gpt-image-1 generates styled scenes → branded with Green &amp; Glow Living → you assign real boards → push to Tailwind.</p>
             <div style={{background:"#fff5e0",border:`1px solid ${GOLD}55`,borderRadius:10,padding:"12px 16px",marginBottom:18,fontSize:13,color:"#7a5a00",lineHeight:1.6}}>
               ⚠️ <strong>One-time:</strong> Complete <strong>API Organisation Verification</strong> at platform.openai.com → Settings → Organisation Verification. Required for gpt-image-1.
             </div>
@@ -458,21 +548,28 @@ function App(){
               <div style={{fontSize:12,color:MUTED,marginBottom:16,padding:"10px 14px",background:"#F6FAF7",borderRadius:8,borderLeft:`3px solid ${GOLD}`}}>
                 💡 <strong style={{color:DARK}}>Cost per product:</strong> ~$0.42 (10 × gpt-image-1 medium) + GPT-4o-mini ~$0.001 + ImgBB free
               </div>
-              {[["OpenAI API Key","sk-proj-...",oai,setOai],["Tailwind API Key","Tailwind → Settings → Integrations → Tailwind API",tw,setTw],["ImgBB API Key","imgbb.com → free account → API",ibb,setIbb]].map(([l,ph,v,s])=>(
+              {[["OpenAI API Key","sk-proj-...",oai,setOai],["Tailwind API Key","Tailwind → Settings → Integrations → Tailwind API",tw,setTw],["ImgBB API Key","imgbb.com → free account → About ImgBB API",ibb,setIbb]].map(([l,ph,v,s])=>(
                 <div key={l} style={{marginBottom:14}}>
                   <label style={lbl}>{l}</label>
                   <input type="password" placeholder={ph} value={v} onChange={e=>s(e.target.value)} style={inp}/>
                 </div>
               ))}
               <div style={{display:"flex",alignItems:"center",gap:8,marginTop:6}}>
-                <input type="checkbox" id="sv" checked={saveKeys} onChange={e=>setSaveKeys(e.target.checked)} style={{width:14,height:14,cursor:"pointer"}}/>
-                <label htmlFor="sv" style={{fontSize:12,color:MUTED,cursor:"pointer"}}>Remember keys in this browser (local only)</label>
+                <input type="checkbox" id="sk" checked={saveKeys} onChange={e=>setSaveKeys(e.target.checked)} style={{width:14,height:14,cursor:"pointer"}}/>
+                <label htmlFor="sk" style={{fontSize:12,color:MUTED,cursor:"pointer"}}>Remember keys in this browser (local only)</label>
               </div>
             </div>
             <button onClick={connect} disabled={conn||!oai||!tw||!ibb}
               style={{...PB,opacity:(!oai||!tw||!ibb)?0.45:1,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-              {conn?<><Sp/> Connecting to Tailwind...</>:"Connect & Continue →"}
+              {conn?<><Spinner/> Connecting...</>:"Connect & Continue →"}
             </button>
+            <div style={{marginTop:12,display:"flex",flexDirection:"column",gap:8}}>
+              <button onClick={testApiKey} disabled={testing||!oai}
+                style={{background:"transparent",border:`1.5px solid ${GOLD}`,color:GOLD,borderRadius:8,padding:"10px",fontSize:13,fontWeight:700,cursor:"pointer",opacity:oai?1:0.4}}>
+                {testing?<><Spinner color={GOLD} size={12}/> Testing...</>:"🔍 Test OpenAI connection"}
+              </button>
+              {testResult&&<div style={{background:testResult.startsWith("✅")?"#E6F4EA":testResult.startsWith("⚠️")?"#FFF8E1":"#FFF3F3",border:`1px solid ${testResult.startsWith("✅")?"#A5D6A7":testResult.startsWith("⚠️")?"#FFE082":"#FFB8B8"}`,borderRadius:8,padding:"10px 14px",fontSize:12,color:testResult.startsWith("✅")?"#1B5E20":testResult.startsWith("⚠️")?"#7a5a00":"#C00",lineHeight:1.6}}>{testResult}</div>}
+            </div>
           </div>
         )}
 
@@ -482,67 +579,69 @@ function App(){
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
               <button onClick={()=>setStep("setup")} style={{background:"none",border:"1px solid #C7D9CA",color:G,borderRadius:6,padding:"5px 12px",fontSize:13,cursor:"pointer"}}>← Back</button>
               <h2 style={{fontFamily:"'Fraunces',Georgia,serif",color:G,margin:0,fontSize:20}}>Product details</h2>
-              {acc&&<div style={{marginLeft:"auto",fontSize:12,color:MUTED}}>📌 {boards.length} boards · {acc.displayName}</div>}
+              {account&&<div style={{marginLeft:"auto",fontSize:12,color:MUTED}}>📌 {boards.length} boards · {account.displayName}</div>}
             </div>
-            {err&&<div style={{background:"#FFF3F3",border:"1px solid #FFB8B8",borderRadius:8,padding:"12px 16px",marginBottom:16,fontSize:13,color:"#C00"}}>⚠️ {err}</div>}
+            {formErr&&<div style={{background:"#FFF3F3",border:"1px solid #FFB8B8",borderRadius:8,padding:"12px 16px",marginBottom:16,fontSize:13,color:"#C00"}}>⚠️ {formErr}</div>}
 
+            {/* Amazon URL */}
             <div style={{marginBottom:16}}>
-              <label style={lbl}>Amazon / Affiliate URL <span style={{color:MUTED,fontWeight:400,textTransform:"none",fontSize:10}}>(paste → product name auto-detected)</span></label>
-              <input value={amazonUrl} onChange={e=>onAmazonUrl(e.target.value)} placeholder="https://www.amazon.com/Product-Name/dp/ASIN?tag=greenandglow-20" style={inp}/>
+              <label style={lbl}>Amazon / Affiliate URL <span style={{color:MUTED,fontWeight:400,textTransform:"none",fontSize:10}}>(product name auto-detected)</span></label>
+              <input value={amazonUrl} onChange={e=>handleAmazonUrl(e.target.value)} placeholder="https://www.amazon.com/Product-Name/dp/ASIN?tag=greenandglow-20" style={inp}/>
               {amazonUrl&&!amazonUrl.includes("tag="+AFF_TAG)&&(
                 <div style={{fontSize:11,color:GOLD,marginTop:4}}>
                   ⚠️ Tag missing —{" "}
-                  <button onClick={()=>setAmazonUrl(ensureAffTag(amazonUrl))} style={{background:"none",border:"none",color:G,fontSize:11,cursor:"pointer",fontWeight:700,textDecoration:"underline",padding:0}}>Add automatically</button>
+                  <button onClick={()=>setAmazonUrl(ensureTag(amazonUrl))} style={{background:"none",border:"none",color:G,fontSize:11,cursor:"pointer",fontWeight:700,textDecoration:"underline",padding:0}}>Add automatically</button>
                 </div>
               )}
               {amazonUrl&&amazonUrl.includes("tag="+AFF_TAG)&&<div style={{fontSize:11,color:G,marginTop:4}}>✓ Affiliate tag present</div>}
             </div>
 
+            {/* Images */}
             <div style={{marginBottom:16}}>
-              <label style={lbl}>Product Images * <span style={{color:MUTED,fontWeight:400,textTransform:"none",fontSize:10}}>Up to {MAX_IMGS} · more = more variety</span></label>
-              {images.length>0&&(
-                <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:10}}>
+              <label style={lbl}>Product Images * <span style={{color:MUTED,fontWeight:400,textTransform:"none",fontSize:10}}>Up to {MAX_IMGS} · more = more variety · name auto-detected ✨</span></label>
+              {images.length>0?(
+                <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:8}}>
                   {images.map((img,i)=>(
                     <div key={i} style={{position:"relative",borderRadius:8,overflow:"hidden",border:`2px solid ${G}33`}}>
                       <img src={img.preview} alt="" style={{width:"100%",aspectRatio:"1",objectFit:"contain",background:"#fff",display:"block"}}/>
-                      <button onClick={()=>setImages(imgs=>imgs.filter((_,j)=>j!==i))}
-                        style={{position:"absolute",top:4,right:4,background:"rgba(0,0,0,0.6)",color:"#fff",border:"none",borderRadius:"50%",width:22,height:22,cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+                      <button onClick={()=>setImages(prev=>prev.filter((_,j)=>j!==i))}
+                        style={{position:"absolute",top:4,right:4,background:"rgba(0,0,0,0.6)",color:"#fff",border:"none",borderRadius:"50%",width:22,height:22,cursor:"pointer",fontSize:13,lineHeight:"22px",textAlign:"center",padding:0}}>×</button>
                       <div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(27,77,46,0.8)",color:"#fff",fontSize:9,fontWeight:700,textAlign:"center",padding:"2px 0"}}>IMG {i+1}</div>
                     </div>
                   ))}
                   {images.length<MAX_IMGS&&(
-                    <div onClick={()=>fref.current.click()} style={{aspectRatio:"1",border:"2px dashed #C7D9CA",borderRadius:8,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",background:"#fff",gap:4}}>
+                    <div onClick={()=>fileRef.current.click()} style={{aspectRatio:"1",border:"2px dashed #C7D9CA",borderRadius:8,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",background:"#fff",gap:4}}>
                       <div style={{fontSize:22,color:MUTED}}>+</div>
                       <div style={{fontSize:10,color:MUTED}}>Add</div>
                     </div>
                   )}
                 </div>
-              )}
-              {images.length===0&&(
-                <div onClick={()=>fref.current.click()} style={{border:"2px dashed #C7D9CA",borderRadius:10,background:"#fff",cursor:"pointer",padding:24,textAlign:"center"}}>
+              ):(
+                <div onClick={()=>fileRef.current.click()} style={{border:"2px dashed #C7D9CA",borderRadius:10,background:"#fff",cursor:"pointer",padding:24,textAlign:"center"}}>
                   <div style={{fontSize:26,marginBottom:5}}>📷</div>
                   <div style={{color:G,fontWeight:700,fontSize:13}}>Click to upload product images</div>
-                  <div style={{color:MUTED,fontSize:11,marginTop:3}}>Up to 4 · Product name auto-detected ✨</div>
+                  <div style={{color:MUTED,fontSize:11,marginTop:3}}>JPG or PNG · auto-detection enabled</div>
                 </div>
               )}
-              <input ref={fref} type="file" accept="image/*" multiple onChange={e=>handleFile(e.target.files)} style={{display:"none"}}/>
+              <input ref={fileRef} type="file" accept="image/*" multiple onChange={e=>handleFiles(e.target.files)} style={{display:"none"}}/>
             </div>
 
-            {detecting&&<div style={{background:"#F6FAF7",border:`1px solid ${G}33`,borderRadius:8,padding:"9px 14px",marginBottom:12,fontSize:12,color:G,display:"flex",alignItems:"center",gap:8}}><Sp color={G} size={13}/> Auto-detecting product details...</div>}
+            {detecting&&<div style={{background:"#F6FAF7",border:`1px solid ${G}33`,borderRadius:8,padding:"9px 14px",marginBottom:12,fontSize:12,color:G,display:"flex",alignItems:"center",gap:8}}><Spinner color={G} size={13}/> Auto-detecting product...</div>}
 
             <div style={{marginBottom:13}}>
               <label style={lbl}>Product Name *</label>
-              <input value={name} onChange={e=>setName(e.target.value)} placeholder="Auto-filled — edit if needed" style={inp}/>
+              <input value={prodName} onChange={e=>setProdName(e.target.value)} placeholder="Auto-filled — edit if needed" style={inp}/>
             </div>
             <div style={{marginBottom:13}}>
               <label style={lbl}>Key Features / Eco Angle</label>
-              <textarea value={desc} onChange={e=>setDesc(e.target.value)} placeholder="Auto-filled — add eco angle or edit" rows={3} style={inp}/>
+              <textarea value={prodDesc} onChange={e=>setProdDesc(e.target.value)} placeholder="Auto-filled — add eco angle or edit" rows={3} style={inp}/>
             </div>
             <div style={{marginBottom:16}}>
               <label style={lbl}>Blog Post URL * <span style={{color:MUTED,fontWeight:400,textTransform:"none",fontSize:10}}>(pin destination)</span></label>
               <input value={blogUrl} onChange={e=>setBlogUrl(e.target.value)} placeholder="https://greenandglowliving.com/your-post-slug/" style={inp}/>
             </div>
 
+            {/* Pin count */}
             <div style={{marginBottom:20}}>
               <label style={lbl}>How many pins?</label>
               <div style={{display:"flex",gap:10}}>
@@ -553,17 +652,15 @@ function App(){
                   </button>
                 ))}
               </div>
-              <div style={{fontSize:11,color:MUTED,marginTop:5}}>
-                {pinCount===1?"~$0.04 · ~30 sec":pinCount===5?"~$0.21 · ~2–3 min":"~$0.42 · ~4–6 min"}
-              </div>
+              <div style={{fontSize:11,color:MUTED,marginTop:5}}>{pinCount===1?"~$0.04 · ~30s":pinCount===5?"~$0.21 · ~2–3 min":"~$0.42 · ~4–6 min"}</div>
             </div>
 
             <div style={{marginBottom:20,background:"#F6FAF7",borderRadius:8,padding:"9px 14px",fontSize:12,color:MUTED,borderLeft:`3px solid ${G}33`}}>
-              🌿 Branded with <strong style={{color:G,fontFamily:"'Fraunces',serif"}}>Green &amp; Glow Living</strong> · Affiliate disclosure in every description · You assign boards before pushing to Tailwind
+              🌿 Branded with <strong style={{color:G,fontFamily:"'Fraunces',serif"}}>Green &amp; Glow Living</strong> · Affiliate disclosure auto-added · You assign real boards before pushing to Tailwind
             </div>
 
             <button onClick={generate} style={PB}>✨ Generate {pinCount} Pin{pinCount>1?"s":""} · ~${(pinCount*0.042).toFixed(2)}</button>
-            <div style={{fontSize:11,color:MUTED,textAlign:"center",marginTop:8}}>Phase 1 of 2 — images only. You'll assign boards before pushing to Tailwind.</div>
+            <div style={{fontSize:11,color:MUTED,textAlign:"center",marginTop:8}}>Phase 1 of 2 — images only. Assign boards + push to Tailwind after.</div>
           </div>
         )}
 
@@ -587,7 +684,7 @@ function App(){
                       <div style={{width:18,height:18,borderRadius:"50%",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,
                         background:p.genStatus==="ready"?G:p.genStatus==="failed"?"#FFEBEE":"#EDF2EE",
                         color:p.genStatus==="ready"?"#fff":p.genStatus==="failed"?"#C00":"#bbb"}}>
-                        {p.genStatus==="ready"?"✓":p.genStatus==="failed"?"✗":p.genStatus==="generating"?<Sp color={G} size={10}/>:i+1}
+                        {p.genStatus==="ready"?"✓":p.genStatus==="failed"?"✗":p.genStatus==="generating"?<Spinner color={G} size={10}/>:i+1}
                       </div>
                       <span style={{color:p.genStatus==="ready"?G:p.genStatus==="failed"?"#C00":"#bbb",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.style}</span>
                     </div>
@@ -604,71 +701,57 @@ function App(){
             {/* Header */}
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
               <div>
-                <h2 style={{fontFamily:"'Fraunces',Georgia,serif",color:G,margin:"0 0 2px",fontSize:20}}>
-                  {readyCount}/{pinCount} image{pinCount>1?"s":""} ready
-                </h2>
-                <div style={{fontSize:12,color:MUTED}}>Assign boards below, then push to Tailwind</div>
+                <h2 style={{fontFamily:"'Fraunces',Georgia,serif",color:G,margin:"0 0 2px",fontSize:20}}>{readyCount}/{pinCount} image{pinCount!==1?"s":""} ready</h2>
+                <div style={{fontSize:12,color:MUTED}}>Assign boards below → Push to Tailwind</div>
               </div>
-              <button onClick={()=>{setPins([]);setImages([]);setName("");setDesc("");setAmazonUrl("");setBlogUrl("https://greenandglowliving.com/");setPushStatus({});setPinBoards({});setErr("");setStep("input");}}
-                style={{background:"none",border:`1.5px solid ${G}`,color:G,borderRadius:7,padding:"6px 14px",fontSize:12,cursor:"pointer",fontWeight:700}}>
-                + New Product
-              </button>
+              <button onClick={newProduct} style={{background:"none",border:`1.5px solid ${G}`,color:G,borderRadius:7,padding:"6px 14px",fontSize:12,cursor:"pointer",fontWeight:700}}>+ New Product</button>
             </div>
 
             {/* Push all banner */}
-            <div style={{background:"#fff",border:`2px solid ${G}`,borderRadius:10,padding:"14px 18px",marginBottom:18,display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+            <div style={{background:"#fff",border:`2px solid ${G}`,borderRadius:10,padding:"14px 18px",marginBottom:18,display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
               <div>
-                <div style={{fontWeight:700,color:G,fontSize:14}}>
-                  {doneCount>0?`✓ ${doneCount}/${readyCount} pushed to Tailwind`:`${readyCount} pin${readyCount!==1?"s":""} ready to push`}
-                </div>
-                <div style={{fontSize:12,color:MUTED,marginTop:2}}>Assign a board to each pin below, then push all at once</div>
+                <div style={{fontWeight:700,color:G,fontSize:14}}>{doneCount>0?`✓ ${doneCount}/${readyCount} pushed to Tailwind`:`${readyCount} pin${readyCount!==1?"s":""} ready`}</div>
+                <div style={{fontSize:12,color:MUTED,marginTop:2}}>Assign a board to each pin then push all at once</div>
               </div>
               <button onClick={pushAll} disabled={pushingAll||!readyCount}
-                style={{background:G,color:"#fff",border:"none",borderRadius:8,padding:"10px 20px",fontSize:13,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0,opacity:readyCount?1:0.4,display:"flex",alignItems:"center",gap:7}}>
-                {pushingAll?<><Sp size={13}/> Pushing...</>:`🚀 Push all to Tailwind`}
+                style={{background:G,color:"#fff",border:"none",borderRadius:8,padding:"10px 20px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:7,opacity:readyCount?1:0.4}}>
+                {pushingAll?<><Spinner size={13}/> Pushing...</>:"🚀 Push all to Tailwind"}
               </button>
             </div>
 
-            {/* Thumbnail grid with board selectors */}
+            {/* Thumbnail grid */}
             <div style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(pinCount,5)},1fr)`,gap:8,marginBottom:20}}>
               {pins.map((p,i)=>{
-                const pStatus=pushStatus[i];
+                const ps=pushStatus[i];
                 return(
                   <div key={i}>
-                    {/* Thumbnail */}
                     <div onClick={()=>setActive(i)} style={{cursor:"pointer",borderRadius:7,overflow:"hidden",border:`2.5px solid ${active===i?GOLD:"transparent"}`,position:"relative",transition:"border .2s"}}>
-                      {p.dataUrl?<img src={p.dataUrl} alt="" style={{width:"100%",display:"block"}}/>
+                      {p.dataUrl
+                        ?<img src={p.dataUrl} alt="" style={{width:"100%",display:"block"}}/>
                         :<div style={{paddingBottom:"150%",background:"#EDF2EE",position:"relative"}}>
                           <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                            {p.genStatus==="generating"?<Sp color={G} size={22}/>:<div style={{fontSize:18,color:p.genStatus==="failed"?"#C00":"#bbb"}}>{p.genStatus==="failed"?"✗":i+1}</div>}
+                            {p.genStatus==="generating"?<Spinner color={G} size={20}/>
+                              :<div style={{fontSize:18,color:p.genStatus==="failed"?"#C00":"#bbb"}}>{p.genStatus==="failed"?"✗":i+1}</div>}
                           </div>
-                        </div>}
-                      {regen===i&&<div style={{position:"absolute",inset:0,background:"rgba(27,77,46,0.75)",display:"flex",alignItems:"center",justifyContent:"center"}}><Sp/></div>}
-                      <div style={{position:"absolute",top:3,left:3,background:active===i?GOLD:"rgba(0,0,0,0.5)",color:"#fff",fontSize:9,fontWeight:700,padding:"1px 5px",borderRadius:3}}>{i+1}</div>
-                      {/* Push status badge */}
-                      {pStatus&&(
-                        <div style={{position:"absolute",top:3,right:3,background:pStatus==="done"?"#E6F4EA":pStatus==="failed"?"#FFEBEE":"#E3F2FD",color:pStatus==="done"?"#1B5E20":pStatus==="failed"?"#B71C1C":"#0D47A1",fontSize:8,fontWeight:700,padding:"2px 5px",borderRadius:4}}>
-                          {pStatus==="done"?"✓ Sent":pStatus==="failed"?"✗ Err":"⟳"}
                         </div>
-                      )}
+                      }
+                      {regenIdx===i&&<div style={{position:"absolute",inset:0,background:"rgba(27,77,46,0.75)",display:"flex",alignItems:"center",justifyContent:"center"}}><Spinner/></div>}
+                      <div style={{position:"absolute",top:3,left:3,background:active===i?GOLD:"rgba(0,0,0,0.5)",color:"#fff",fontSize:9,fontWeight:700,padding:"1px 5px",borderRadius:3}}>{i+1}</div>
+                      {ps&&<div style={{position:"absolute",top:3,right:3,background:ps==="done"?"#E6F4EA":ps==="failed"?"#FFEBEE":"#E3F2FD",color:ps==="done"?"#1B5E20":ps==="failed"?"#B71C1C":"#0D47A1",fontSize:8,fontWeight:700,padding:"2px 5px",borderRadius:4}}>{ps==="done"?"✓":ps==="failed"?"✗":"⟳"}</div>}
                     </div>
-                    {/* Board selector */}
-                    <select
-                      value={pinBoards[i]||""}
-                      onChange={e=>setPinBoards(pb=>({...pb,[i]:e.target.value}))}
-                      style={{width:"100%",marginTop:5,padding:"5px 28px 5px 8px",borderRadius:6,border:`1.5px solid ${pinBoards[i]?G:"#C7D9CA"}`,background:"#fff",fontSize:10,color:pinBoards[i]?G:MUTED,cursor:"pointer",fontFamily:"'Lato',system-ui"}}>
+                    {/* Board dropdown */}
+                    <select value={pinBoards[i]||""} onChange={e=>setPinBoards(pb=>({...pb,[i]:e.target.value}))}
+                      style={{width:"100%",marginTop:5,padding:"5px 24px 5px 8px",borderRadius:6,border:`1.5px solid ${pinBoards[i]?G:"#C7D9CA"}`,background:"#fff",fontSize:10,color:pinBoards[i]?G:MUTED,cursor:"pointer",fontFamily:"'Lato',system-ui"}}>
                       <option value="">— Board —</option>
-                      {boards.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}
+                      {boards.map(b=><option key={b.id||b.name} value={b.id||""}>{b.name}</option>)}
                     </select>
                     {/* Actions */}
                     <div style={{display:"flex",gap:4,marginTop:4}}>
-                      <button onClick={()=>regenPin(i)} disabled={regen!==null}
-                        style={{flex:1,padding:"4px 0",background:"#fff",color:MUTED,border:`1px solid #C7D9CA`,borderRadius:5,fontSize:9,cursor:regen!==null?"not-allowed":"pointer",fontWeight:700,opacity:regen!==null&&regen!==i?0.35:1}}>
-                        ↺ Redo
-                      </button>
-                      <button onClick={()=>pushPin(i)} disabled={!p.imgbbUrl||pushStatus[i]==="pushing"}
-                        style={{flex:1,padding:"4px 0",background:pushStatus[i]==="done"?"#E6F4EA":G,color:pushStatus[i]==="done"?"#1B5E20":"#fff",border:"none",borderRadius:5,fontSize:9,cursor:(!p.imgbbUrl||pushStatus[i]==="pushing")?"not-allowed":"pointer",fontWeight:700,opacity:p.imgbbUrl?1:0.4}}>
-                        {pushStatus[i]==="pushing"?"⟳":pushStatus[i]==="done"?"✓ Sent":"↑ Push"}
+                      <button onClick={()=>regenPin(i)} disabled={regenIdx!==null}
+                        style={{flex:1,padding:"4px 0",background:"#fff",color:MUTED,border:"1px solid #C7D9CA",borderRadius:5,fontSize:9,cursor:regenIdx!==null?"not-allowed":"pointer",fontWeight:700,opacity:regenIdx!==null&&regenIdx!==i?0.35:1}}>↺ Redo</button>
+                      <button onClick={()=>pushPin(i)} disabled={!p.imgbbUrl||ps==="pushing"}
+                        style={{flex:1,padding:"4px 0",background:ps==="done"?"#E6F4EA":G,color:ps==="done"?"#1B5E20":"#fff",border:"none",borderRadius:5,fontSize:9,cursor:(!p.imgbbUrl||ps==="pushing")?"not-allowed":"pointer",fontWeight:700,opacity:p.imgbbUrl?1:0.4}}>
+                        {ps==="done"?"✓":ps==="pushing"?"⟳":"↑ Push"}
                       </button>
                     </div>
                   </div>
@@ -680,56 +763,71 @@ function App(){
             {pins[active]&&(
               <div style={{background:"#fff",borderRadius:12,border:"1px solid #E0EBE2",overflow:"hidden"}}>
                 <div style={{display:"flex"}}>
-                  <div style={{width:134,flexShrink:0}}>
+                  <div style={{width:130,flexShrink:0}}>
                     {pins[active].dataUrl?<img src={pins[active].dataUrl} style={{width:"100%",display:"block"}} alt=""/>:<div style={{paddingBottom:"150%",background:"#EDF2EE"}}/>}
                   </div>
                   <div style={{flex:1,padding:"14px 16px",display:"flex",flexDirection:"column",gap:10}}>
                     <div>
                       <div style={{fontSize:10,fontWeight:700,color:MUTED,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:2}}>Pin {active+1} · {pins[active].style}</div>
-                      {pins[active].error&&<div style={{fontSize:11,color:"#C00",marginTop:2,lineHeight:1.4}}>{pins[active].error}</div>}
+                      {pins[active].error&&<div style={{fontSize:11,color:"#C00",marginTop:2}}>{pins[active].error}</div>}
                     </div>
+                    {/* Overlay text edit */}
                     <div>
-                      <div style={{fontSize:10,fontWeight:700,color:MUTED,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:4}}>Overlay Text</div>
-                      <input value={etxt} onChange={e=>setEtxt(e.target.value)} maxLength={30} style={{...inp,fontSize:15,fontWeight:700,padding:"7px 10px"}}/>
-                      <button onClick={applyEdit} disabled={ebusy||etxt===pins[active].overlay_text||!pins[active].rawB64}
-                        style={{marginTop:6,background:etxt!==pins[active].overlay_text&&pins[active].rawB64?GOLD:"#E0EBE2",color:etxt!==pins[active].overlay_text&&pins[active].rawB64?"#fff":MUTED,border:"none",borderRadius:6,padding:"7px 14px",fontSize:12,fontWeight:700,cursor:"pointer",width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-                        {ebusy?<><Sp color={GOLD} size={12}/> Applying...</>:"Apply Text Change"}
+                      <label style={lbl}>Overlay Text</label>
+                      <input value={overlayEdit} onChange={e=>setOverlayEdit(e.target.value)} maxLength={30}
+                        style={{...inp,fontSize:15,fontWeight:700,padding:"7px 10px"}}/>
+                      <button onClick={applyOverlay} disabled={overlayBusy||overlayEdit===pins[active].overlay_text||!pins[active].rawB64}
+                        style={{marginTop:6,background:overlayEdit!==pins[active].overlay_text&&pins[active].rawB64?GOLD:"#E0EBE2",color:overlayEdit!==pins[active].overlay_text&&pins[active].rawB64?"#fff":MUTED,border:"none",borderRadius:6,padding:"7px 14px",fontSize:12,fontWeight:700,cursor:"pointer",width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+                        {overlayBusy?<><Spinner color={GOLD} size={12}/> Applying...</>:"Apply Overlay Text"}
                       </button>
                     </div>
-                    <div style={{marginTop:"auto"}}>
-                      <div style={{fontSize:10,fontWeight:700,color:MUTED,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:4}}>Board for this pin</div>
+                    {/* Board for this pin */}
+                    <div>
+                      <label style={lbl}>Board for this pin</label>
                       <select value={pinBoards[active]||""} onChange={e=>setPinBoards(pb=>({...pb,[active]:e.target.value}))}
                         style={{...inp,padding:"9px 28px 9px 12px",fontSize:13}}>
                         <option value="">— Select a board —</option>
-                        {boards.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}
+                        {boards.map(b=><option key={b.id||b.name} value={b.id||""}>{b.name}</option>)}
                       </select>
                     </div>
-                    <div style={{display:"flex",gap:7}}>
+                    {/* Action buttons */}
+                    <div style={{display:"flex",gap:7,marginTop:"auto"}}>
                       <button onClick={()=>dl(pins[active],active)} style={{flex:2,background:GOLD,color:"#fff",border:"none",borderRadius:7,padding:"9px",fontSize:12,fontWeight:700,cursor:"pointer"}}>⬇ Download</button>
                       <button onClick={()=>pushPin(active)} disabled={!pins[active].imgbbUrl||pushStatus[active]==="pushing"}
                         style={{flex:2,background:pushStatus[active]==="done"?"#E6F4EA":G,color:pushStatus[active]==="done"?"#1B5E20":"#fff",border:"none",borderRadius:7,padding:"9px",fontSize:12,fontWeight:700,cursor:"pointer"}}>
                         {pushStatus[active]==="done"?"✓ In Tailwind":pushStatus[active]==="pushing"?"Pushing...":"↑ Push to Tailwind"}
                       </button>
-                      <button onClick={()=>regenPin(active)} disabled={regen!==null} style={{flex:1,background:"transparent",color:G,border:`1.5px solid ${G}`,borderRadius:7,padding:"9px",fontSize:12,fontWeight:700,cursor:"pointer"}}>↺ Redo</button>
+                      <button onClick={()=>regenPin(active)} disabled={regenIdx!==null}
+                        style={{flex:1,background:"transparent",color:G,border:`1.5px solid ${G}`,borderRadius:7,padding:"9px",fontSize:12,fontWeight:700,cursor:"pointer"}}>↺ Redo</button>
                     </div>
                   </div>
                 </div>
-                <EditField label="Pinterest Title" value={pins[active].title||""} onChange={v=>updatePinField(active,"title",v)}/>
-                <EditField label="Description" value={pins[active].description||""} onChange={v=>updatePinField(active,"description",v)} multiline/>
-                <EditField label="Alt Text" value={pins[active].alt_text||""} onChange={v=>updatePinField(active,"alt_text",v)}/>                {/* Download all */}
+                {/* Editable content fields */}
+                <EditField label="Pinterest Title" value={pins[active].title} onChange={v=>updPin(active,{title:v})}/>
+                <EditField label="Description" value={pins[active].description} onChange={v=>updPin(active,{description:v})} rows={5}/>
+                <EditField label="Alt Text" value={pins[active].alt_text} onChange={v=>updPin(active,{alt_text:v})}/>
+                {/* Download all */}
                 <div style={{borderTop:"1px solid #EDF2EE",padding:"12px 18px",background:"#FAFCFA"}}>
                   <div style={{fontSize:10,color:MUTED,marginBottom:8,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>Download all</div>
                   <div style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(pinCount,5)},1fr)`,gap:5,marginBottom:pinCount>5?5:0}}>
-                    {pins.slice(0,Math.min(pinCount,5)).map((p,i)=><button key={i} onClick={()=>dl(p,i)} disabled={!p.dataUrl} style={{background:active===i?G:"#EDF2EE",color:active===i?"#fff":G,border:"none",borderRadius:5,padding:"7px 2px",fontSize:11,cursor:p.dataUrl?"pointer":"not-allowed",fontWeight:700,opacity:p.dataUrl?1:0.4}}>{i+1}</button>)}
+                    {pins.slice(0,Math.min(pinCount,5)).map((p,i)=>(
+                      <button key={i} onClick={()=>dl(p,i)} disabled={!p.dataUrl}
+                        style={{background:active===i?G:"#EDF2EE",color:active===i?"#fff":G,border:"none",borderRadius:5,padding:"7px 2px",fontSize:11,cursor:p.dataUrl?"pointer":"not-allowed",fontWeight:700,opacity:p.dataUrl?1:0.4}}>{i+1}</button>
+                    ))}
                   </div>
-                  {pinCount>5&&<div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:5}}>
-                    {pins.slice(5,pinCount).map((p,i)=><button key={i+5} onClick={()=>dl(p,i+5)} disabled={!p.dataUrl} style={{background:active===i+5?G:"#EDF2EE",color:active===i+5?"#fff":G,border:"none",borderRadius:5,padding:"7px 2px",fontSize:11,cursor:p.dataUrl?"pointer":"not-allowed",fontWeight:700,opacity:p.dataUrl?1:0.4}}>{i+6}</button>)}
-                  </div>}
+                  {pinCount>5&&(
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:5}}>
+                      {pins.slice(5,pinCount).map((p,i)=>(
+                        <button key={i+5} onClick={()=>dl(p,i+5)} disabled={!p.dataUrl}
+                          style={{background:active===i+5?G:"#EDF2EE",color:active===i+5?"#fff":G,border:"none",borderRadius:5,padding:"7px 2px",fontSize:11,cursor:p.dataUrl?"pointer":"not-allowed",fontWeight:700,opacity:p.dataUrl?1:0.4}}>{i+6}</button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
             <div style={{background:`${G}12`,border:`1px solid ${G}33`,borderRadius:10,padding:"12px 16px",marginTop:14,fontSize:12,color:G,lineHeight:1.75}}>
-              <strong>Workflow:</strong> Assign boards → Push all to Tailwind → open Tailwind to review drafts → schedule to SmartQueue.
+              <strong>Workflow:</strong> Assign boards → Push all to Tailwind → open Tailwind → review drafts → schedule to SmartQueue.
             </div>
           </div>
         )}
@@ -738,7 +836,7 @@ function App(){
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+ReactDOM.createRoot(document.getElementById("root")).render(<ErrorBoundary><App/></ErrorBoundary>);
 </script>
 </body>
 </html>

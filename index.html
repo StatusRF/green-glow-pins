@@ -142,14 +142,38 @@ async function deletePost(aid,pid,key){
   await fetch(`https://api-v1.tailwind.ai/v1/accounts/${aid}/posts/${pid}`,{method:"DELETE",headers:{Authorization:"Bearer "+key}});
 }
 
+// ── Error Boundary ───────────────────────────────────────────────────────────
+class ErrorBoundary extends React.Component{
+  constructor(props){super(props);this.state={error:null};}
+  static getDerivedStateFromError(e){return{error:e};}
+  render(){
+    if(this.state.error)return(
+      <div style={{padding:32,fontFamily:"system-ui",maxWidth:600,margin:"40px auto"}}>
+        <div style={{background:"#FFF3F3",border:"1px solid #FFB8B8",borderRadius:10,padding:24}}>
+          <div style={{fontWeight:700,color:"#C00",fontSize:16,marginBottom:8}}>⚠️ Something went wrong</div>
+          <div style={{fontSize:13,color:"#555",fontFamily:"monospace",whiteSpace:"pre-wrap"}}>{this.state.error.toString()}</div>
+          <button onClick={()=>{this.setState({error:null});window.location.reload();}}
+            style={{marginTop:16,background:"#1B4D2E",color:"#fff",border:"none",borderRadius:7,padding:"10px 20px",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+            Reload page
+          </button>
+        </div>
+      </div>
+    );
+    return this.props.children;
+  }
+}
+
 // ── Canvas ───────────────────────────────────────────────────────────────────
 
 async function compositePin(rawB64,overlayText){
-  try{await document.fonts.load('700 32px "Fraunces"');}catch(e){}
-  return new Promise(resolve=>{
+  if(!rawB64)throw new Error("No image data to composite");
+  if(!overlayText)overlayText="Green & Glow";
+  try{await document.fonts.load('700 44px "Fraunces"');}catch(e){}
+  return new Promise((resolve,reject)=>{
     const canvas=document.createElement("canvas");
     canvas.width=1024;canvas.height=1536;
     const ctx=canvas.getContext("2d"),img=new Image();
+    img.onerror=()=>reject(new Error("Failed to load image for compositing"));
     img.onload=()=>{
       ctx.drawImage(img,0,0,1024,1536);
       const g1=ctx.createLinearGradient(0,970,0,1536);
@@ -256,23 +280,21 @@ function App(){
 
   useEffect(()=>{if(pins[active])setEtxt(pins[active].overlay_text||"");},[active]);
 
-  // Pre-select boards from GPT suggestion when pins change
-  useEffect(()=>{
-    if(!pins.length||!boards.length)return;
-    setPinBoards(prev=>{
-      const next={...prev};
-      pins.forEach((p,i)=>{
-        if(next[i])return; // don't override user selection
-        if(!p.suggested_board)return;
-        const lower=p.suggested_board.toLowerCase();
-        const match=boards.find(b=>b.name.toLowerCase()===lower)||
-                     boards.find(b=>b.name.toLowerCase().includes(lower))||
-                     boards.find(b=>lower.includes(b.name.toLowerCase()));
-        if(match)next[i]=match.id;
-      });
-      return next;
+  // Pre-select boards from GPT suggestion — runs once when pins are set
+  const preselectBoards=(pinList,boardList)=>{
+    const next={};
+    pinList.forEach((p,i)=>{
+      if(!p.suggested_board||!boardList.length)return;
+      try{
+        const lower=(p.suggested_board||"").toLowerCase().trim();
+        const match=boardList.find(b=>b.name&&b.name.toLowerCase().trim()===lower)||
+                     boardList.find(b=>b.name&&b.name.toLowerCase().includes(lower))||
+                     boardList.find(b=>b.name&&lower.includes(b.name.toLowerCase()));
+        if(match&&match.id)next[i]=match.id;
+      }catch(e){}
     });
-  },[pins,boards]);
+    return next;
+  };
 
   const handleFile=async(files)=>{
     const toAdd=Array.from(files).slice(0,MAX_IMGS-images.length);
@@ -344,6 +366,7 @@ function App(){
       }
       const init=pl.map((p,i)=>({...p,style:STYLES[i]?.label||`Style ${i+1}`,rawB64:null,dataUrl:null,imgbbUrl:null,genStatus:"pending"}));
       setPins(init);
+      setPinBoards(preselectBoards(pl,boards));
       const work=[...init];
       for(let i=0;i<pl.length;i++){
         const s=STYLES[i]||{scene:"clean product photography"};
@@ -738,7 +761,7 @@ function App(){
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+ReactDOM.createRoot(document.getElementById("root")).render(<ErrorBoundary><App/></ErrorBoundary>);
 </script>
 </body>
 </html>

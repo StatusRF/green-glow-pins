@@ -91,7 +91,7 @@ async function apiGenerateContent(imgs,name,desc,blogUrl,boardNames,key,count){
     body:JSON.stringify({model:"gpt-4o-mini",max_tokens:4000,messages:[
       {role:"system",content:"Pinterest expert for Green & Glow Living eco blog. Return ONLY valid compact JSON."},
       {role:"user",content:[
-        ...imgs.map(img=>({type:"image_url",image_url:{url:`data:${img.mime};base64,${img.b64}`,detail:"low"}})),
+        ...imgs.slice(0,1).map(img=>({type:"image_url",image_url:{url:`data:${img.mime};base64,${img.b64}`,detail:"low"}})),
         {type:"text",text:`Product: ${name}\nFeatures: ${desc||"see images"}\nBlog URL: ${blogUrl}\nBoards: ${bl}\n\nGenerate EXACTLY ${count} pin concepts. Return ONLY this JSON:\n{"pins":[{"overlay_text":"","title":"","description":"","suggested_board":"","alt_text":""}]}\n\nRules:\n- overlay_text: max 5 punchy words, all different angles\n- title: max 100 chars\n- description: max 400 chars. Hook. 2-3 eco features. Payoff. "Full review on the blog 🌿". New line: "Affiliate link — no extra cost to you 💚". New line + 8-10 hashtags.\n- suggested_board: most relevant board name from the Boards list\n- alt_text: descriptive sentence with product name\n- Tone: warm eco-conscious Green & Glow Living`}
       ]}
     ]})
@@ -351,8 +351,23 @@ function App(){
     finally{setDetecting(false);}
   }
 
-  // Connect to Tailwind
-  async function connect(){
+  const[testResult,setTestResult]=useState("");
+  const[testing,setTesting]=useState(false);
+
+  async function testApiKey(){
+    if(!oai){setTestResult("❌ No OpenAI key entered");return;}
+    setTesting(true);setTestResult("");
+    try{
+      const r=await fetch("https://api.openai.com/v1/models",{headers:{Authorization:"Bearer "+oai}});
+      if(r.ok){setTestResult("✅ OpenAI reachable — key works");}
+      else if(r.status===401){setTestResult("❌ Key invalid or expired — check platform.openai.com");}
+      else if(r.status===429){setTestResult("❌ Rate limited or no credits — add credits at platform.openai.com/settings/billing");}
+      else{setTestResult("⚠️ OpenAI returned status "+r.status);}
+    }catch(e){
+      setTestResult("❌ Cannot reach api.openai.com — check: 1) browser extensions (disable uBlock/VPN) 2) network firewall 3) try a different browser");
+    }
+    finally{setTesting(false);}
+  }
     setConn(true);setConnErr("");
     try{
       if(saveKeys){localStorage.setItem("gg_oai",oai);localStorage.setItem("gg_tw",tw);localStorage.setItem("gg_ibb",ibb);}
@@ -548,6 +563,13 @@ function App(){
               style={{...PB,opacity:(!oai||!tw||!ibb)?0.45:1,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
               {conn?<><Spinner/> Connecting...</>:"Connect & Continue →"}
             </button>
+            <div style={{marginTop:12,display:"flex",flexDirection:"column",gap:8}}>
+              <button onClick={testApiKey} disabled={testing||!oai}
+                style={{background:"transparent",border:`1.5px solid ${GOLD}`,color:GOLD,borderRadius:8,padding:"10px",fontSize:13,fontWeight:700,cursor:"pointer",opacity:oai?1:0.4}}>
+                {testing?<><Spinner color={GOLD} size={12}/> Testing...</>:"🔍 Test OpenAI connection"}
+              </button>
+              {testResult&&<div style={{background:testResult.startsWith("✅")?"#E6F4EA":testResult.startsWith("⚠️")?"#FFF8E1":"#FFF3F3",border:`1px solid ${testResult.startsWith("✅")?"#A5D6A7":testResult.startsWith("⚠️")?"#FFE082":"#FFB8B8"}`,borderRadius:8,padding:"10px 14px",fontSize:12,color:testResult.startsWith("✅")?"#1B5E20":testResult.startsWith("⚠️")?"#7a5a00":"#C00",lineHeight:1.6}}>{testResult}</div>}
+            </div>
           </div>
         )}
 

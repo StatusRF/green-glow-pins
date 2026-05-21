@@ -368,6 +368,9 @@ function App(){
     }
     finally{setTesting(false);}
   }
+
+  // Connect to Tailwind
+  async function connect(){
     setConn(true);setConnErr("");
     try{
       if(saveKeys){localStorage.setItem("gg_oai",oai);localStorage.setItem("gg_tw",tw);localStorage.setItem("gg_ibb",ibb);}
